@@ -97,8 +97,13 @@ static void write_bmp(const char *path, int w, int h, u32 (*pixel)(int, int, u32
     bmp[10] = 54;
     bmp[14] = 40;
     bmp[18] = (u8)w; bmp[19] = (u8)(w >> 8);
-    bmp[22] = (u8)((-h) & 0xFF); bmp[23] = (u8)(((-h) >> 8) & 0xFF);
-    bmp[26] = 24; bmp[27] = 0;
+    /* height is a full signed 32-bit value (negative = top-down) */
+    s32 negh = -h;
+    bmp[22] = (u8)(negh & 0xFF); bmp[23] = (u8)((negh >> 8) & 0xFF);
+    bmp[24] = (u8)((negh >> 16) & 0xFF); bmp[25] = (u8)((negh >> 24) & 0xFF);
+    /* planes (offset 26) = 1, bits-per-pixel (offset 28) = 24 */
+    bmp[26] = 1;
+    bmp[28] = 24;
     bmp[34] = (u8)(w * h * 3); bmp[35] = (u8)((w * h * 3) >> 8);
     for (int y = 0; y < h; y++) {
         u8 *row = bmp + 54 + (u32)y * w * 3;
@@ -125,7 +130,7 @@ static u32 px_gradient(int x, int y, u32 seed) {
     if (r > 255) r = 255;
     if (g > 255) g = 255;
     if (b > 255) b = 255;
-    return (u8)(r | (g << 8) | ((b & 0xFF) << 16));
+    return (u32)((u32)r | ((u32)g << 8) | ((u32)b << 16));
 }
 
 static u32 px_checker(int x, int y, u32 seed) {

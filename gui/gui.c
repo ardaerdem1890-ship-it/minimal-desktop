@@ -25,7 +25,7 @@
 #define TASKBAR_H 22
 #define TITLE_H   10
 
-enum { WIN_TERM = 0, WIN_NOTE, WIN_TASKS, WIN_NET, WIN_BROWSER, WIN_EXPLORER, WIN_IMGVIEW, WIN_COUNT };
+enum { WIN_TERM = 0, WIN_NOTE, WIN_TASKS, WIN_NET, WIN_BROWSER, WIN_EXPLORER, WIN_IMGVIEW, WIN_SETTINGS, WIN_COUNT };
 
 typedef struct {
     bool open;
@@ -41,10 +41,11 @@ static gui_win_t wins[WIN_COUNT] = {
     { false,  30,  24, 206, 126, WIN_NET,      "network"   },
     { false,  18,  10, 280, 150, WIN_BROWSER,  "minimalweb"},
     { false,  26,  16, 240, 140, WIN_EXPLORER, "explorer"  },
-    { false,  50,  12, 220, 160, WIN_IMGVIEW,  "imgview"   }
+    { false,  50,  12, 220, 160, WIN_IMGVIEW,  "imgview"   },
+    { false,  60,  20, 200, 120, WIN_SETTINGS, "settings"  }
 };
 
-static int zorder[WIN_COUNT] = { 0, 1, 2, 3, 4, 5, 6 };
+static int zorder[WIN_COUNT] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 static int focus = WIN_TERM;
 static bool start_open;
 static int drag_win = -1;
@@ -64,6 +65,11 @@ static bool speaker_muted = false;
 static int speaker_volume = 2; /* 0..3 */
 static int shot_counter;
 static int maximized_win = -1;
+static int cursor_style = 0;
+static int mouse_sensitivity = 1;
+static bool show_clock = true;
+static int resize_win = -1;
+static int resize_mode = 0;
 static u32 super_last;
 
 /* terminal state */
@@ -652,6 +658,48 @@ static void imgview_key(int key) {
     }
 }
 
+/* Return bitmask if (mx,my) is on a window edge/corner. */
+static int resize_hit(gui_win_t *w, int mx, int my) {
+    const int GRIP = 4;
+    int mask = 0;
+    if (mx >= w->x - GRIP && mx <= w->x + GRIP) mask |= 1;
+    if (mx >= w->x + w->w - GRIP && mx <= w->x + w->w + GRIP) mask |= 2;
+    if (my >= w->y - GRIP && my <= w->y + GRIP) mask |= 4;
+    if (my >= w->y + w->h - GRIP && my <= w->y + w->h + GRIP) mask |= 8;
+    return mask;
+}
+
+static void apply_resize(gui_win_t *w, int mx, int my) {
+    int minw = 80, minh = 50;
+    if (resize_mode & 1) { int nx = mx; if (nx < 0) nx = 0; if (w->x + w->w - nx >= minw) { w->w += w->x - nx; w->x = nx; } }
+    if (resize_mode & 2) { int nw = mx - w->x; if (nw >= minw && w->x + nw <= GFX_WIDTH) w->w = nw; }
+    if (resize_mode & 4) { int ny = my; if (ny < 0) ny = 0; if (w->y + w->h - ny >= minh) { w->h += w->y - ny; w->y = ny; } }
+    if (resize_mode & 8) { int nh = my - w->y; if (nh >= minh && w->y + nh <= TASKBAR_Y) w->h = nh; }
+}
+
+static void draw_settings(gui_win_t *w) {
+    int x = w->x + 4, y = w->y + TITLE_H + 4;
+    gfx_fill_rect(w->x + 2, w->y + TITLE_H + 1, w->w - 4, w->h - TITLE_H - 3, GUI_BLACK);
+    gfx_text(x, y, "Display & Mouse Settings", GUI_WHITE);
+    char line[80];
+    ksnprintf(line, sizeof(line), "Cursor style : %s   [C to change]",
+              cursor_style == 0 ? "Arrow" : cursor_style == 1 ? "Cross" : "Block");
+    gfx_text(x, y + 16, line, GUI_TEXT);
+    ksnprintf(line, sizeof(line), "Sensitivity  : %d   [+/- to change]", mouse_sensitivity);
+    gfx_text(x, y + 28, line, GUI_TEXT);
+    ksnprintf(line, sizeof(line), "Clock        : %s   [T to toggle]", show_clock ? "On" : "Off");
+    gfx_text(x, y + 40, line, GUI_TEXT);
+    gfx_text(x, y + 56, "Drag window edges/corners to resize", GUI_GREY);
+    gfx_text(x, y + 66, "Ctrl+M maximize, Ctrl+Q close", GUI_GREY);
+}
+
+static void settings_key(int key) {
+    if (key == 'c' || key == 'C') cursor_style = (cursor_style + 1) % 3;
+    else if (key == '+' || key == '=') { if (mouse_sensitivity < 3) mouse_sensitivity++; }
+    else if (key == '-' || key == '_') { if (mouse_sensitivity > 0) mouse_sensitivity--; }
+    else if (key == 't' || key == 'T') show_clock = !show_clock;
+}
+
 static void draw_windows(void) {
     for (int i = 0; i < WIN_COUNT; i++) {
         gui_win_t *w = &wins[zorder[i]];
@@ -665,6 +713,7 @@ static void draw_windows(void) {
             case WIN_BROWSER:  draw_browser(w);  break;
             case WIN_EXPLORER: draw_explorer(w); break;
             case WIN_IMGVIEW:  draw_imgview(w);  break;
+            case WIN_SETTINGS: draw_settings(w); break;
             default: break;
         }
     }
@@ -718,13 +767,13 @@ static void draw_taskbar(void) {
     gfx_text(GFX_WIDTH - (int)strlen(clock) * 8 - 3, TASKBAR_Y + 7, clock, GUI_WHITE);
 }
 
-static const int start_icons[12] = {
+static const int start_icons[13] = {
     ICON_TERM, ICON_NOTEPAD, ICON_TASKS, ICON_NET, ICON_BROWSER,
-    ICON_EXPLORER, ICON_DOOM, ICON_SNAKE, ICON_PONG, ICON_DISK, ICON_START, ICON_FILE
+    ICON_EXPLORER, ICON_DOOM, ICON_SNAKE, ICON_PONG, ICON_DISK, ICON_START, ICON_FILE, ICON_SPEAKER
 };
-static const char *start_labels[12] = {
+static const char *start_labels[13] = {
     "Terminal", "Notepad", "Tasks", "Network", "Browser",
-    "Explorer", "DOOM", "Snake", "Pong", "Screenshot", "Exit GUI", "Image Viewer"
+    "Explorer", "DOOM", "Snake", "Pong", "Screenshot", "Exit GUI", "Image Viewer", "Settings"
 };
 
 static void draw_start_menu(void) {
@@ -737,11 +786,11 @@ static void draw_start_menu(void) {
     gfx_text(x + 4, y + 2, "Minimal Desktop", GUI_WHITE);
     gfx_text(x + w - 24, y + 2, "SUPER", GUI_YELLOW);
     gfx_hline(x + 2, y + 13, w - 4, GUI_GREY);
-    static const u8 cols[12] = {
+    static const u8 cols[13] = {
         GUI_GREEN, GUI_YELLOW, GUI_CYAN, GUI_BLUE, GUI_MAGENTA,
-        GUI_TITLE_LT, GUI_RED, GUI_GREEN, GUI_YELLOW, GUI_GREY, GUI_RED, GUI_CYAN
+        GUI_TITLE_LT, GUI_RED, GUI_GREEN, GUI_YELLOW, GUI_GREY, GUI_RED, GUI_CYAN, GUI_YELLOW
     };
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 13; i++) {
         int cellx = x + 3 + (i % 2) * 74;
         int celly = y + 16 + (i / 2) * 18;
         gfx_fill_rect(cellx, celly, 72, 17, (i & 1) ? GUI_DESK2 : GUI_DESK1);
@@ -798,6 +847,7 @@ static void menu_click(int mx, int my) {
         case 9: save_screenshot(); break;
         case 10: running = false; break;
         case 11: iv_refresh(); iv_index = 0; iv_load(); open_window(WIN_IMGVIEW); break;
+        case 12: open_window(WIN_SETTINGS); break;
         default: break;
     }
     start_open = false;
@@ -873,6 +923,11 @@ static void handle_click(int mx, int my) {
             if (row >= 0 && row < ex_count) { ex_sel = row; explorer_open_selected(); return; }
         }
 
+        int rmask = resize_hit(w, mx, my);
+        if (rmask && my >= w->y + TITLE_H) {
+            resize_win = idx; resize_mode = rmask;
+            return;
+        }
         if (my < w->y + TITLE_H) { drag_win = idx; drag_dx = mx - w->x; drag_dy = my - w->y; }
         return;
     }
@@ -1004,6 +1059,11 @@ int gui_run(void) {
         bool left = (m.buttons & 1) != 0;
         if (!prev_left && left) handle_click(m.x, m.y);
 
+        if (resize_win >= 0) {
+            if (left) {
+                apply_resize(&wins[resize_win], m.x, m.y);
+            } else { resize_win = -1; resize_mode = 0; }
+        }
         if (drag_win >= 0) {
             if (left) {
                 gui_win_t *w = &wins[drag_win];
@@ -1034,6 +1094,13 @@ int gui_run(void) {
                     start_open = !start_open;
                 }
                 key = kbd_getchar(); continue;
+            }
+            if (key == 'v' || key == 'V') {
+                iv_refresh(); iv_index = 0; iv_load(); open_window(WIN_IMGVIEW);
+                key = kbd_getchar(); continue;
+            }
+            if (key == 'o' || key == 'O') {
+                open_window(WIN_SETTINGS); key = kbd_getchar(); continue;
             }
             if (key == KEY_TAB && kbd_alt_down()) { alt_tab(); key = kbd_getchar(); continue; }
             if (key == 'q' && kbd_ctrl_down() && focus >= 0 && focus < WIN_COUNT) {
@@ -1074,6 +1141,7 @@ int gui_run(void) {
             else if (focus == WIN_BROWSER && wins[WIN_BROWSER].open) browser_key(key);
             else if (focus == WIN_EXPLORER && wins[WIN_EXPLORER].open) explorer_key(key);
             else if (focus == WIN_IMGVIEW && wins[WIN_IMGVIEW].open) imgview_key(key);
+            else if (focus == WIN_SETTINGS && wins[WIN_SETTINGS].open) settings_key(key);
             key = kbd_getchar();
         }
 
