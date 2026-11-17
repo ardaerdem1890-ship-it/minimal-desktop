@@ -1,0 +1,6 @@
+# build artifacts (the ISOs are published as GitHub release assets, not in git)
+build/
+*.iso
+!website/downloads/versions.json
+__pycache__/
+*.pyc

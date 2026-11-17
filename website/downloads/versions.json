@@ -1,0 +1,42 @@
+[
+  {
+    "version": "1.4.0",
+    "label": "v1.4.0 (current)",
+    "date": "2026-11-17",
+    "latest": true,
+    "file": "downloads/minimal_desktop_v1.4.0.iso",
+    "notes": "Rebuilt crash screen that restores the VGA font and palette before printing (no more garbled fault screen) with a 5 second countdown and three reset paths. Leaving the GUI no longer corrupts the text console. Enter/Backspace/Tab/Esc scancodes fixed. 21 keyboard layouts with Alt+Shift, 'keymap list|next|<id>'. Terminal editor 'edit' and pager 'less'. Intel PRO/1000 (e1000) driver for VirtualBox alongside RTL8139 and PCnet. New gradient MINIMAL OS boot wordmark. 'minipacket -L' package listing. Disk installer: `install` streams the isohybrid image to the first ATA disk; boot splash rebuilt from your original ANSI art.",
+    "sha256": "0587ed373fb34d4274a1b290a95f72753f827b2ac6e909730e7d5f6621c9a839",
+    "size": 24117248
+  },
+  {
+    "version": "1.3.0",
+    "label": "v1.3.0",
+    "date": "2026-11-17",
+    "latest": false,
+    "file": "downloads/minimal_desktop_v1.3.0.iso",
+    "notes": "AMD PCnet driver for VirtualBox/QEMU virtual NICs (DHCP + selftest now pass in VirtualBox), clickable network-connector buttons, ANSI-art boot banner, keyboard/console/palette stability fixes, plus all v1.1/v1.2 features (Miniland, enhanced DOOM, rendered GUI, hwinfo).",
+    "sha256": "7c3c98b3fd8f7b8718bb8363aa364f93c77e8fb8ce370d2ed01e43d7b98ba0c5",
+    "size": 12040192
+  },
+  {
+    "version": "1.2.0",
+    "label": "v1.2.0",
+    "date": "2026-11-16",
+    "latest": false,
+    "file": "downloads/minimal_desktop_v1.2.0.iso",
+    "notes": "Crash diagnostics, Super-key start menu, movable Miniland windows, enhanced DOOM, rendered GUI, GUI network connector, hwinfo detection.",
+    "sha256": "c23070751649f3be355b53bfa42cc2f34078a6a4b85f7dcc2e8e54169e5db3aa",
+    "size": 12034048
+  },
+  {
+    "version": "1.1.0",
+    "label": "v1.1.0",
+    "date": "2026-11-16",
+    "latest": false,
+    "file": "downloads/minimal_desktop_v1.1.0.iso",
+    "notes": "GUI double-buffering, browser, doom, keymaps, minipacket, Miniland, file explorer, screenshots.",
+    "sha256": "fbd5bfc24d823b808fb260c05370e2b7b4084873c24af02c3374ff72009f6924",
+    "size": 12019712
+  }
+]

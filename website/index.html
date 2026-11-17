@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minimal Desktop — a from-scratch x86 operating system</title>
+<meta name="description" content="Minimal Desktop is a bootable hobby operating system written from scratch in C and x86 assembly: VGA text console, mode 13h GUI, package store, and a full Ethernet/ARP/IPv4/ICMP/UDP/DHCP/DNS/TCP network stack.">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070b10'/%3E%3Crect x='4' y='6' width='24' height='17' rx='2' fill='%2346f08a'/%3E%3Crect x='7' y='9' width='18' height='11' fill='%23070b10'/%3E%3Cpath d='M9 12h4M9 15h8M9 18h3' stroke='%2346f08a' stroke-width='1.4'/%3E%3Crect x='11' y='25' width='10' height='2' fill='%2346f08a'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#top" aria-label="Minimal Desktop home">
+    <span class="brand-mark" aria-hidden="true">
+      <span></span>
+    </span>
+    <span class="brand-text">minimal<em>@</em>desktop</span>
+  </a>
+  <nav class="nav" aria-label="Main navigation">
+    <a href="#features">Features</a>
+    <a href="#network">Networking</a>
+    <a href="#desktop">Desktop</a>
+    <a href="#store">Store</a>
+    <a href="#build">Build</a>
+    <a href="#commands">Commands</a>
+    <a href="#download">Download</a>
+    <a href="#versions">Versions</a>
+    <a href="#suggestions">Suggestions</a>
+    <a href="https://github.com" data-gh="repo" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <a class="btn btn-small" href="#terminal">Try the console</a>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="dot"></span> x86 hobby OS · v1.4.0 · bootable ISO</p>
+      <h1>An operating system<br><span class="accent">you can read in one sitting.</span></h1>
+      <p class="lede">
+        Minimal Desktop boots from GRUB straight into a fast 80×25 console, speaks
+        native VGA, PS/2, PIT, ATA and RTL8139, and can install a graphical desktop —
+        all in C and 32-bit assembly, with no host OS underneath.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-download" id="download-iso" href="downloads/minimal_desktop.iso" download="minimal_desktop.iso">
+          <span>Download ISO</span><small id="iso-size">build pending</small>
+        </a>
+        <a class="btn" href="#build">Build from source</a>
+      </div>
+      <p class="download-note" id="download-note">Bootable image · GRUB Multiboot2 · QEMU / VirtualBox / USB</p>
+      <ul class="ticks">
+        <li>Boots in QEMU, VirtualBox &amp; on bare metal</li>
+        <li>DHCP auto-IP on boot</li>
+        <li>Ping, DNS and HTTP from the shell</li>
+        <li>Self-test suite over COM1</li>
+      </ul>
+    </div>
+
+    <div class="hero-visual">
+      <div class="crt" id="hero-terminal" aria-label="Animated boot console">
+        <div class="crt-bar">
+          <span class="crt-dot red"></span><span class="crt-dot amber"></span><span class="crt-dot green"></span>
+          <span class="crt-title">minimal_desktop.iso — COM1 @ 115200</span>
+        </div>
+        <pre class="crt-screen" id="boot-screen"></pre>
+      </div>
+      <div class="stat-row">
+        <div><strong>32-bit</strong><span>protected mode</span></div>
+        <div><strong>0</strong><span>host dependencies</span></div>
+        <div><strong>18</strong><span>kernel self-tests</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section class="section" id="features">
+    <div class="section-head">
+      <p class="kicker">01 — The system</p>
+      <h2>Everything is written from scratch.</h2>
+      <p class="section-sub">No Linux. No libc. No frameworks. Just a Multiboot2 kernel, a handful of drivers, and a shell that boots in under a second.</p>
+    </div>
+
+    <div class="grid features">
+      <article class="card feature">
+        <div class="icon" aria-hidden="true">▚</div>
+        <h3>VGA text &amp; mode 13h</h3>
+        <p>An 80×25 scrolling console with 16 colours, plus register-level switching to 320×200×256 for the desktop — no BIOS calls after boot.</p>
+        <span class="tag">console.c · vga_hw.c</span>
+      </article>
+      <article class="card feature">
+        <div class="icon" aria-hidden="true">⌨</div>
+        <h3>Interrupt-driven input</h3>
+        <p>IRQ1 decodes set-1 scancodes with shift, caps and arrows. IRQ12 decodes three-byte PS/2 mouse packets for the GUI cursor.</p>
+        <span class="tag">keyboard.c · mouse.c</span>
+      </article>
+      <article class="card feature">
+        <div class="icon" aria-hidden="true">◷</div>
+        <h3>PIT at 100 Hz</h3>
+        <p>System uptime, scheduler accounting, game loops and blocking sleeps all run from one programmable interval timer tick.</p>
+        <span class="tag">pit.c</span>
+      </article>
+      <article class="card feature">
+        <div class="icon" aria-hidden="true">▤</div>
+        <h3>RAMFS + ATA</h3>
+        <p>A hierarchical in-memory filesystem with files, directories, append and delete, alongside a PIO ATA/IDE driver for real disks.</p>
+        <span class="tag">ramfs.c · ata.c</span>
+      </article>
+      <article class="card feature">
+        <div class="icon" aria-hidden="true">⬡</div>
+        <h3>Package store</h3>
+        <p>An embedded Multiboot2 archive with FNV-1a verified module images. Install Snake, Pong and the desktop at runtime.</p>
+        <span class="tag">store.c · gen_store.py</span>
+      </article>
+      <article class="card feature network-card">
+        <div class="icon" aria-hidden="true">⇄</div>
+        <h3>Real networking</h3>
+        <p>PCI enumeration, RTL8139 DMA rings, ARP, IPv4, ICMP, UDP, DHCP, DNS and a TCP client that can fetch real web pages.</p>
+        <span class="tag">pci.c · rtl8139.c · net.c</span>
+        <a class="card-link" href="#network">See the stack →</a>
+      </article>
+    </div>
+  </section>
+
+  <!-- ================= NETWORK ================= -->
+  <section class="section network" id="network">
+    <div class="section-head">
+      <p class="kicker">02 — Networking</p>
+      <h2>A network stack that fits in the kernel.</h2>
+      <p class="section-sub">
+        QEMU’s user-mode network gives the guest a virtual Ethernet segment.
+        Minimal Desktop negotiates its own address with DHCP, resolves names with DNS,
+        and talks HTTP/1.0 over a hand-built TCP client.
+      </p>
+    </div>
+
+    <div class="network-layout">
+      <div class="stack-visual card" aria-label="Network stack diagram">
+        <div class="stack-title">packet path</div>
+        <div class="stack-layer l7">
+          <span>HTTP GET</span><span class="layer-note">curl · store · browser</span>
+        </div>
+        <div class="stack-layer l6">
+          <span>TCP client</span><span class="layer-note">seq/ack · 3-way handshake</span>
+        </div>
+        <div class="stack-layer l5">
+          <span>DHCP · DNS · UDP</span><span class="layer-note">ports 68/53</span>
+        </div>
+        <div class="stack-layer l4">
+          <span>IPv4 · ICMP</span><span class="layer-note">checksums · ping</span>
+        </div>
+        <div class="stack-layer l3">
+          <span>ARP</span><span class="layer-note">16-entry cache</span>
+        </div>
+        <div class="stack-layer l2">
+          <span>Ethernet II</span><span class="layer-note">RTL8139 · PCI</span>
+        </div>
+        <div class="stack-flow" aria-hidden="true"></div>
+      </div>
+
+      <div class="network-copy">
+        <div class="net-head">
+          <h3>Auto-IP on boot</h3>
+          <span class="pill live">DHCP</span>
+        </div>
+        <p>
+          The kernel probes PCI for a Realtek RTL8139, enables bus mastering, sets up
+          RX/TX rings and broadcasts a DHCP DISCOVER before the shell prompt appears.
+          QEMU hands back <code>10.0.2.15/24</code>, gateway <code>10.0.2.2</code>,
+          DNS <code>10.0.2.3</code>.
+        </p>
+
+        <div class="net-grid">
+          <div><span class="net-k">NIC</span><strong>RTL8139</strong><small>I/O BAR, MAC from IDR</small></div>
+          <div><span class="net-k">L3</span><strong>ARP + IPv4</strong><small>cache, ICMP echo</small></div>
+          <div><span class="net-k">L4</span><strong>UDP + TCP</strong><small>DHCP, DNS, HTTP</small></div>
+          <div><span class="net-k">CLI</span><strong>4 commands</strong><small>ifconfig, ping, nslookup, curl</small></div>
+        </div>
+
+        <div class="terminal-mini card" aria-label="Example network session">
+          <div class="mini-bar"><span>minimal@os:~$</span><button class="copy-btn" data-copy="ifconfig&#10;ping 10.0.2.2&#10;nslookup example.com&#10;curl http://example.com/">copy</button></div>
+          <pre><span class="p">minimal@os:~$</span> ifconfig
+eth0  RTL8139  52:54:00:12:34:56  UP
+      inet 10.0.2.15  netmask 255.255.255.0
+      gateway 10.0.2.2  dns 10.0.2.3  DHCP lease
+
+<span class="p">minimal@os:~$</span> ping 10.0.2.2
+64 bytes from 10.0.2.2: icmp_seq=1 ttl=64 time=0.4 ms
+64 bytes from 10.0.2.2: icmp_seq=2 ttl=64 time=0.3 ms
+3/3 packets, 0% loss
+
+<span class="p">minimal@os:~$</span> curl http://example.com/
+HTTP/1.0 200 OK
+&lt;!doctype html&gt;&lt;html&gt;…</pre>
+        </div>
+
+        <p class="note">
+          <strong>Store over HTTP.</strong> <code>store install</code> first tries the configured
+          mirror (<code>http://10.0.2.2:8000</code>), validates the downloaded MDMOD1 image,
+          and falls back to the embedded archive if the network is down.
+        </p>
+      </div>
+    </div>
+
+    <div class="qemu-line">
+      <span class="qemu-label">QEMU</span>
+      <code>qemu-system-i386 -cdrom minimal_desktop.iso -m 256M -netdev user,id=net0 -device rtl8139,netdev=net0 -serial stdio</code>
+    </div>
+  </section>
+
+  <!-- ================= DESKTOP ================= -->
+  <section class="section" id="desktop">
+    <div class="section-head">
+      <p class="kicker">03 — Minimal Desktop</p>
+      <h2>A 320×200 window manager,<br>because constraints are fun.</h2>
+      <p class="section-sub">Install <code>minimal-desktop</code>, type <code>startgui</code>, and the VGA mode switches under your feet.</p>
+    </div>
+
+    <div class="desktop-stage">
+      <div class="desktop-mock" aria-label="Mockup of the Minimal Desktop GUI">
+        <div class="wallpaper">
+          <div class="wall-glow"></div>
+          <div class="wall-grid"></div>
+        </div>
+
+        <div class="win win-terminal">
+          <div class="win-title">
+            <span>Terminal</span>
+            <span class="win-btns"><i></i><i></i><b>×</b></span>
+          </div>
+          <div class="win-body mono">
+            <p class="g">minimal@os:~$ neofetch</p>
+            <p>OS: Minimal Desktop 1.0.0</p>
+            <p>Kernel: mdos-i386</p>
+            <p>Shell: msh</p>
+            <p>Net: 10.0.2.15 (DHCP)</p>
+            <p>Store: 2 modules installed</p>
+            <p class="g">minimal@os:~$ <span class="blink">▌</span></p>
+          </div>
+        </div>
+
+        <div class="win win-network">
+          <div class="win-title">
+            <span>Network</span>
+            <span class="win-btns"><i></i><i></i><b>×</b></span>
+          </div>
+          <div class="win-body">
+            <div class="net-row"><span>eth0</span><em>UP</em></div>
+            <div class="meter"><span style="width:78%"></span></div>
+            <p class="small">RTL8139 · 100 Mbit<br>RX 1.2 MiB · TX 8 KiB</p>
+            <p class="small">IP 10.0.2.15 / 24<br>GW 10.0.2.2 · DNS 10.0.2.3</p>
+            <p class="tiny">DHCP lease · ARP 2 entries</p>
+          </div>
+        </div>
+
+        <div class="win win-browser">
+          <div class="win-title">
+            <span>Browser</span>
+            <span class="win-btns"><i></i><i></i><b>×</b></span>
+          </div>
+          <div class="win-body">
+            <div class="address">http://10.0.2.2:8000/</div>
+            <div class="page">
+              <p class="page-h">Minimal Web</p>
+              <p>Hello from the host.</p>
+              <p class="tiny">HTTP/1.0 · 200 OK · 431 bytes</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="taskbar">
+          <div class="start-btn">◆ MENU</div>
+          <div class="task-btns"><span>Terminal</span><span>Network</span><span>Browser</span></div>
+          <div class="clock">16:52</div>
+        </div>
+      </div>
+      <div class="desktop-caption">
+        <span><strong>4</strong> built-in apps</span>
+        <span><strong>Draggable</strong> windows</span>
+        <span><strong>Click</strong> to close</span>
+        <span><strong>ESC</strong> to console</span>
+      </div>
+    </div>
+
+    <div class="gui-features">
+      <article>
+        <h3>Rendered desktop</h3>
+        <p>Bitmap icons, a dithered gradient wallpaper, window drop shadows and a start menu opened with the Super key — all drawn pixel by pixel.</p>
+      </article>
+      <article>
+        <h3>Terminal &amp; Notepad</h3>
+        <p>An in-GUI shell with command output, plus a text viewer for files in RAMFS.</p>
+      </article>
+      <article>
+        <h3>Network connector</h3>
+        <p>A GUI panel with live IP/DHCP/MAC status, traffic counters and ping / DHCP-renew / info / DNS actions, plus a small HTTP browser.</p>
+      </article>
+      <article>
+        <h3>Return to console</h3>
+        <p>Restores text mode by reprogramming the VGA registers, then resumes the shell where it left off.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ================= STORE ================= -->
+  <section class="section" id="store">
+    <div class="section-head">
+      <p class="kicker">04 — Package store</p>
+      <h2>Small modules, verified at install time.</h2>
+      <p class="section-sub">The repository ships inside the ISO as a Multiboot2 module. Every package carries a size, entry point and FNV-1a checksum.</p>
+    </div>
+
+    <div class="grid store-grid">
+      <article class="card pkg">
+        <div class="pkg-top"><span class="pkg-icon snake">S</span><span class="pkg-size">552 B</span></div>
+        <h3>snake</h3>
+        <p>Terminal Snake on a 60×20 field. PIT-timed movement, growing body, score and high score.</p>
+        <div class="pkg-meta"><span class="pill">games</span><code>minipacket -İ snake</code></div>
+      </article>
+      <article class="card pkg">
+        <div class="pkg-top"><span class="pkg-icon pong">P</span><span class="pkg-size">552 B</span></div>
+        <h3>pong</h3>
+        <p>Two paddles, a physics ball and a chasing AI. First to seven, with live scoreboard.</p>
+        <div class="pkg-meta"><span class="pill">games</span><code>minipacket -İ pong</code></div>
+      </article>
+      <article class="card pkg">
+        <div class="pkg-top"><span class="pkg-icon desk" style="color:var(--red);border-color:#5a2a2a;background:rgba(255,97,97,.07)">F</span><span class="pkg-size">552 B</span></div>
+        <h3>doom</h3>
+        <p>Enhanced 2.5D raycaster: textured/shaded walls, chasing enemies with health bars, pickups, minimap, HUD, sprint and mouse look.</p>
+        <div class="pkg-meta"><span class="pill">games</span><code>minipacket -İ doom</code></div>
+      </article>
+      <article class="card pkg highlighted">
+        <div class="pkg-top"><span class="pkg-icon desk">D</span><span class="pkg-size">552 B</span></div>
+        <h3>minimal-desktop</h3>
+        <p>The graphical environment: compositor, taskbar, clock, terminal, notepad, tasks, browser and file explorer.</p>
+        <div class="pkg-meta"><span class="pill">desktop</span><code>minipacket -İ minimal-desktop</code></div>
+      </article>
+      <article class="card pkg highlighted">
+        <div class="pkg-top"><span class="pkg-icon desk" style="color:var(--cyan);border-color:#26525a;background:rgba(75,214,239,.07)">M</span><span class="pkg-size">552 B</span></div>
+        <h3>miniland</h3>
+        <p>Miniland: Hyprland-inspired tiling with gaps, 4 workspaces, movable/resizable floating windows, drop shadows and a Super-key start menu.</p>
+        <div class="pkg-meta"><span class="pill">desktop</span><code>minipacket -İ miniland</code></div>
+      </article>
+    </div>
+
+    <div class="store-terminal card">
+      <div class="mini-bar"><span>store session</span><button class="copy-btn" data-copy="minipacket list&#10;minipacket -İ miniland&#10;miniland">copy</button></div>
+      <pre><span class="p">minimal@os:~$</span> minipacket list
+  S  PACKAGE           VERSION   SIZE      CATEGORY   DESCRIPTION
+  -  ----------------  --------  --------  ---------  --------------------
+     snake             1.2.0      552 B    game       Classic snake
+     pong              1.1.0      552 B    game       Pong vs CPU
+     minimal-desktop   1.0.0      552 B    desktop    Graphical desktop
+     doom              0.9.0      552 B    game       2.5D raycasting FPS
+     miniland          0.1.0      552 B    desktop    Tiling WM (Hyprland-inspired)
+
+<span class="p">minimal@os:~$</span> minipacket -İ miniland
+Installing miniland 0.1.0 (552 bytes, embedded)
+  unpacking         [##################] 100%
+  [PASS] checksum verified: 3d480a5b
+  [ OK ] registered module #5, unpacked to /usr/packages/miniland.mdp
+  Run it with: miniland
+
+<span class="p">minimal@os:~$</span> miniland
+Switching to VGA mode 13h (320x200x256)…</pre>
+    </div>
+  </section>
+
+  <!-- ================= BUILD ================= -->
+  <section class="section" id="build">
+    <div class="section-head">
+      <p class="kicker">05 — Build &amp; boot</p>
+      <h2>From source to a QEMU window in one command.</h2>
+      <p class="section-sub">The pipeline compiles the kernel and modules, builds the ISO, copies it to <code>D:\minimal_desktop.iso</code>, launches QEMU and streams the self-test over COM1.</p>
+    </div>
+
+    <div class="build-grid">
+      <div class="card build-card">
+        <div class="build-head"><h3>Windows</h3><span class="pill">build_and_run.bat</span></div>
+        <pre class="code"><span class="c">REM installs nothing; uses WSL Ubuntu</span>
+wsl -u root -e bash tools/install_toolchain.sh
+build_and_run.bat
+
+<span class="c">REM headless CI test</span>
+build_and_run.bat test</pre>
+      </div>
+      <div class="card build-card">
+        <div class="build-head"><h3>Linux / WSL</h3><span class="pill">build_and_run.sh</span></div>
+        <pre class="code"><span class="c"># one-time toolchain</span>
+sudo apt install build-essential gcc-i686-linux-gnu \
+  nasm qemu-system-x86 grub-pc-bin xorriso mtools
+
+./build_and_run.sh
+make test</pre>
+      </div>
+    </div>
+
+    <div class="pipeline card">
+      <div class="step"><span>1</span><div><strong>Compile</strong><small>i686-elf ABI, freestanding C + NASM</small></div></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span>2</span><div><strong>Pack</strong><small>store.img, GRUB menu, ISO9660</small></div></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span>3</span><div><strong>Boot</strong><small>QEMU window + serial console</small></div></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span>4</span><div><strong>Verify</strong><small>13 PASS/FAIL checks, exit 0/1</small></div></div>
+    </div>
+
+    <div class="boot-flags">
+      <div><code>--autotest</code><span>GRUB cmdline: run the suite, print to COM1, exit QEMU.</span></div>
+      <div><code>make test</code><span>Headless: <code>-display none -serial stdio</code> + isa-debug-exit.</span></div>
+      <div><code>selftest</code><span>Run the same checks manually from the shell.</span></div>
+    </div>
+  </section>
+
+  <!-- ================= TERMINAL DEMO ================= -->
+  <section class="section terminal-section" id="terminal">
+    <div class="section-head">
+      <p class="kicker">06 — Try it</p>
+      <h2>A shell you can poke at.</h2>
+      <p class="section-sub">This is a browser simulation of the real command set. Type <code>help</code>, <code>ifconfig</code>, <code>ping 10.0.2.2</code>, <code>curl http://example.com/</code> or <code>startgui</code>.</p>
+    </div>
+
+    <div class="crt demo" id="demo">
+      <div class="crt-bar">
+        <span class="crt-dot red"></span><span class="crt-dot amber"></span><span class="crt-dot green"></span>
+        <span class="crt-title">minimal@os — interactive demo</span>
+        <button class="crt-clear" id="demo-clear" type="button">clear</button>
+      </div>
+      <div class="crt-screen demo-screen" id="demo-screen" tabindex="0" role="log" aria-live="polite"></div>
+      <form class="demo-input" id="demo-form" autocomplete="off">
+        <label class="sr-only" for="demo-cmd">Command</label>
+        <span class="prompt-label" id="demo-prompt">minimal@os:~$</span>
+        <input id="demo-cmd" name="cmd" type="text" spellcheck="false" placeholder="type help and press Enter" aria-describedby="demo-hint">
+        <button class="btn btn-small" type="submit">Run</button>
+      </form>
+      <p class="demo-hint" id="demo-hint">↑/↓ history · Tab completes commands · Ctrl+L clears</p>
+    </div>
+
+    <div class="quick-commands">
+      <button data-term="help">help</button>
+      <button data-term="sysinfo">sysinfo</button>
+      <button data-term="drivers">drivers</button>
+      <button data-term="ifconfig">ifconfig</button>
+      <button data-term="ping 10.0.2.2">ping 10.0.2.2</button>
+      <button data-term="nslookup example.com">nslookup example.com</button>
+      <button data-term="curl http://example.com/">curl</button>
+      <button data-term="store list">store list</button>
+      <button data-term="selftest">selftest</button>
+      <button data-term="startgui">startgui</button>
+    </div>
+  </section>
+
+  <!-- ================= COMMANDS ================= -->
+  <section class="section" id="commands">
+    <div class="section-head">
+      <p class="kicker">07 — Reference</p>
+      <h2>The command set.</h2>
+    </div>
+
+    <div class="command-groups">
+      <div class="card command-card">
+        <h3>System</h3>
+        <dl>
+          <div><dt>help</dt><dd>categorised command list</dd></div>
+          <div><dt>sysinfo</dt><dd>CPU, RAM, version, uptime</dd></div>
+          <div><dt>drivers</dt><dd>loaded drivers, IRQs, state</dd></div>
+          <div><dt>taskmng</dt><dd>live task manager, kill by PID</dd></div>
+          <div><dt>selftest</dt><dd>kernel verification suite</dd></div>
+          <div><dt>uptime / date / time</dt><dd>clocks and RTC</dd></div>
+          <div><dt>reboot / shutdown</dt><dd>reset or ACPI power-off</dd></div>
+        </dl>
+      </div>
+      <div class="card command-card">
+        <h3>Files &amp; memory</h3>
+        <dl>
+          <div><dt>ls · cd · pwd</dt><dd>navigate RAMFS</dd></div>
+          <div><dt>mkdir · touch · rm</dt><dd>create and remove nodes</dd></div>
+          <div><dt>cat · write · echo</dt><dd>read and write files</dd></div>
+          <div><dt>hexdump</dt><dd>file bytes with ASCII</dd></div>
+          <div><dt>memmap</dt><dd>E820 map, frames, heap</dd></div>
+          <div><dt>df</dt><dd>RAMFS usage</dd></div>
+        </dl>
+      </div>
+      <div class="card command-card">
+        <h3>Network</h3>
+        <dl>
+          <div><dt>ifconfig</dt><dd>MAC, IP, mask, gateway, counters</dd></div>
+          <div><dt>ping &lt;ip&gt;</dt><dd>ICMP echo with RTT</dd></div>
+          <div><dt>nslookup &lt;name&gt;</dt><dd>DNS A-record query</dd></div>
+          <div><dt>curl &lt;url&gt;</dt><dd>HTTP/1.0 GET over TCP</dd></div>
+          <div><dt>netstat</dt><dd>ARP cache, sockets, stats</dd></div>
+          <div><dt>store</dt><dd>HTTP mirror + local fallback</dd></div>
+        </dl>
+      </div>
+      <div class="card command-card">
+        <h3>Utilities &amp; fun</h3>
+        <dl>
+          <div><dt>calc</dt><dd>recursive-descent expression evaluator</dd></div>
+          <div><dt>theme</dt><dd>green, amber, blue, mono</dd></div>
+          <div><dt>matrix</dt><dd>digital rain until ESC</dd></div>
+          <div><dt>beep</dt><dd>PC speaker frequency sweep</dd></div>
+          <div><dt>snake · pong</dt><dd>store games</dd></div>
+          <div><dt>startgui</dt><dd>desktop environment</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOWNLOAD ================= -->
+  <section class="section download-section" id="download">
+    <div class="download-card card">
+      <div class="download-copy">
+        <p class="kicker">08 — Get the image</p>
+        <h2>Download Minimal Desktop.</h2>
+        <p class="section-sub">
+          The ISO is built by the project pipeline and published here. It boots through
+          GRUB Multiboot2, carries the embedded store archive, and runs both the text
+          shell and the optional graphical desktop.
+        </p>
+        <ul class="download-meta">
+          <li><span>File</span><code>minimal_desktop.iso</code></li>
+          <li><span>Version</span><code>1.4.0 (Nova)</code></li>
+          <li><span>Size</span><code id="iso-size-row">build pending</code></li>
+          <li><span>Boot</span><code>BIOS · GRUB · Multiboot2</code></li>
+          <li><span>Network</span><code>RTL8139 · DHCP · TCP/HTTP</code></li>
+        </ul>
+      </div>
+      <div class="download-action">
+        <div class="iso-art" aria-hidden="true">
+          <span class="iso-disc"></span>
+          <span class="iso-label">minimal<br>desktop</span>
+        </div>
+        <a class="btn btn-primary btn-download" id="download-iso-2" href="downloads/minimal_desktop.iso" download="minimal_desktop.iso">
+          <span>Download ISO</span><small id="iso-size-2">build pending</small>
+        </a>
+        <p class="download-hint" id="download-hint">Awaiting the build pipeline. Run <code>build_and_run.bat</code> to produce it.</p>
+        <p class="download-checksum">Verify: <code>sha256sum minimal_desktop.iso</code></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VERSIONS ================= -->
+  <section class="section" id="versions">
+    <div class="section-head">
+      <p class="kicker">09 — Releases</p>
+      <h2>Download different versions.</h2>
+      <p class="section-sub">Pick a specific ISO build. The latest build is also available as <code>minimal_desktop.iso</code>.</p>
+    </div>
+    <div class="card versions-card">
+      <div class="versions-toolbar">
+        <span class="pill">ISO releases</span>
+        <span class="versions-note">Files served from <code>downloads/</code></span>
+      </div>
+      <div id="versions-list" class="versions-list" aria-live="polite">
+        <p class="versions-loading">Loading versions…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUGGESTIONS ================= -->
+  <section class="section" id="suggestions">
+    <div class="section-head">
+      <p class="kicker">10 — Feedback</p>
+      <h2>Suggestions &amp; what to fix next.</h2>
+      <p class="section-sub">
+        Found a bug, a garbled screen, or a feature you want? Write it here. Entries are
+        saved in your browser and can be turned into a GitHub issue in one click.
+      </p>
+    </div>
+
+    <div class="suggest-layout">
+      <div class="card suggest-known">
+        <div class="suggest-known-head">
+          <h3>Known rough edges</h3>
+          <span class="pill">working on it</span>
+        </div>
+        <ul class="issue-list">
+          <li><span class="issue-tag bug">bug</span><span>Leaving the GUI must restore the VGA font — fixed in 1.4.0, please re-test.</span></li>
+          <li><span class="issue-tag bug">bug</span><span>Enter / Backspace / Tab were not decoded after the keyboard-layout rewrite — fixed.</span></li>
+          <li><span class="issue-tag fix">next</span><span>Installer polish: pick a target disk instead of always writing ATA drive 0.</span></li>
+          <li><span class="issue-tag fix">next</span><span>virtio-net paravirtualised NIC (VirtualBox "Paravirtualized Network").</span></li>
+          <li><span class="issue-tag wish">wish</span><span>PC speaker / Sound Blaster audio, USB mass storage, and a real FAT driver.</span></li>
+        </ul>
+        <a class="btn btn-small" data-gh="issues" href="https://github.com" target="_blank" rel="noopener">Browse all GitHub issues</a>
+      </div>
+
+      <form class="card suggest-form" id="suggest-form" novalidate>
+        <h3>Leave a suggestion</h3>
+        <label class="field">
+          <span>Title</span>
+          <input id="suggest-title" name="title" type="text" maxlength="120" placeholder="GUI terminal prompt escapes the window" required>
+        </label>
+        <label class="field">
+          <span>Area</span>
+          <select id="suggest-area" name="area">
+            <option value="bug">Bug / crash</option>
+            <option value="graphics">Graphics &amp; GUI</option>
+            <option value="keyboard">Keyboard &amp; layouts</option>
+            <option value="network">Networking</option>
+            <option value="install">Installer &amp; disk</option>
+            <option value="feature">Feature request</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Details</span>
+          <textarea id="suggest-details" name="details" rows="5" maxlength="2000" placeholder="What did you do, what did you expect, what happened?"></textarea>
+        </label>
+        <div class="suggest-actions">
+          <button class="btn btn-primary" type="submit">Save suggestion</button>
+          <a class="btn" id="suggest-issue" href="#" target="_blank" rel="noopener" aria-disabled="true">Open as GitHub issue</a>
+        </div>
+        <p class="suggest-note" id="suggest-note" role="status"></p>
+      </form>
+    </div>
+
+    <div class="suggest-saved" id="suggest-saved" hidden>
+      <h3>Saved in this browser <span class="suggest-count" id="suggest-count"></span></h3>
+      <ul class="suggest-list" id="suggest-list"></ul>
+      <button class="btn btn-small" type="button" id="suggest-clear">Clear saved suggestions</button>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <section class="cta">
+    <div>
+      <p class="kicker">Ready?</p>
+      <h2>Build it. Boot it. Ping something.</h2>
+      <p>One ISO, no installer, no partitions. Just GRUB, a kernel, and a network card.</p>
+    </div>
+    <div class="cta-actions">
+      <a class="btn btn-primary" href="#download">Download latest ISO</a>
+      <a class="btn" href="#versions">All versions</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="foot-brand">
+    <span class="brand-text">minimal<em>@</em>desktop</span>
+    <p>A from-scratch x86 hobby operating system. <span id="year"></span></p>
+  </div>
+  <div class="foot-links">
+    <a href="#features">Features</a>
+    <a href="#network">Networking</a>
+    <a href="#desktop">Desktop</a>
+    <a href="#build">Build</a>
+    <a href="#commands">Commands</a>
+    <a href="#versions">Versions</a>
+    <a href="#suggestions">Suggestions</a>
+    <a href="https://github.com" data-gh="repo" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <p class="foot-note">VGA · PS/2 · PIT · ATA · RTL8139 · PCnet · e1000 · GRUB · QEMU</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
