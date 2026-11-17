@@ -1,9 +1,19 @@
 [
   {
-    "version": "1.5.0",
-    "label": "v1.5.0 (current)",
+    "version": "1.6.0",
+    "label": "v1.6.0 (current)",
     "date": "2026-11-17",
     "latest": true,
+    "file": "downloads/minimal_desktop_v1.6.0.iso",
+    "notes": "User system: boots to a login screen, ROOT/root on live CD (note shown), account creation during install, sudo/root permissions, useradd/userdel/passwd/users/whoami/su/sudo, fortune and banner commands. All prior features retained.",
+    "sha256": "6b517751f6c88629ff6bbb2a6f3832857ed97a0fd17964ec43dde88b3b18c8a0",
+    "size": 32604160
+  },
+  {
+    "version": "1.5.0",
+    "label": "v1.5.0",
+    "date": "2026-11-17",
+    "latest": false,
     "file": "downloads/minimal_desktop_v1.5.0.iso",
     "notes": "Everything update: ASCII sysinfo, theme presets + persistence, 4 screensavers, 13 sample images, weather, lynx terminal browser, PC speaker music player, GUI window maximize/move/close shortcuts, backup/restore, full-screen slideshow, FAT chkdsk, login screen with users on /disk, plus all prior fixes.",
     "sha256": "15b2a8f86a3561a483d9813cf34b1a6f21b54058c2a4a0d5190a99534d22b799",

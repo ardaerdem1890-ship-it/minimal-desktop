@@ -6,6 +6,13 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.6.0 "Users"
+
+- **Login screen at boot** with accounts stored on `/disk`. Live CD boots as `ROOT` / `root` (shown on screen).
+- **Account creation during `install`** — pick a username/password; `ROOT` always remains.
+- **Permissions + sudo**: restricted commands (install, format, useradd, userdel, passwd, chkdsk, etc.) need root; `sudo <cmd>` prompts for your password.
+- New commands: `sudo whoami users useradd userdel passwd su fortune banner`.
+
 ## What's new in 1.5.0 "Everything"
 
 - **15 new features in one release**: screen savers (`saver 0..3`), GUI maximize/move/close shortcuts (Ctrl+M/Q/Arrows), ASCII-art `sysinfo`, theme persistence, `weather`, `lynx` text browser, PC-speaker `play`, `backup`/`restore`, 13 sample images, full-screen `slideshow`, `chkdsk`, a login screen (`--login` boot entry), and more.
@@ -204,7 +211,7 @@ the button becomes active and shows the size.
 
 ## Complete command reference
 
-Every command registered in `kernel/shell.c` (68 total), grouped by category.
+Every command registered in `kernel/shell.c` (77 total), grouped by category.
 
 ### Clock
 
@@ -294,21 +301,30 @@ Every command registered in `kernel/shell.c` (68 total), grouped by category.
 | `hwinfo` | `hwinfo` | detect PCI/GPU/NIC/VM hardware |
 | `install` | `install` | write the OS image to the first ATA disk |
 | `keymap` | `keymap list\|next\|<layout>` | switch keyboard layout (Alt+Shift) |
+| `passwd` | `passwd <user> <new>` | change a password |
 | `reboot` | `reboot` | restart the machine |
 | `selftest` | `selftest [--autotest]` | run the built-in hardware tests |
 | `shutdown` | `shutdown` | power off the machine (ACPI) |
+| `su` | `su <user>` | switch user |
+| `sudo` | `sudo <command>` | run a command as root |
 | `sysinfo` | `sysinfo` | show OS, CPU, memory and device info |
 | `taskmng` | `taskmng [kill <pid>]` | task manager |
 | `uname` | `uname` | kernel and build identification |
 | `uptime` | `uptime` | time since boot |
+| `useradd` | `useradd <name> <pass>` | create a new user (root) |
+| `userdel` | `userdel <name>` | delete a user (root) |
+| `users` | `users` | list all accounts |
+| `whoami` | `whoami` | show current user |
 
 ### Tools
 
 | Command | Usage | Description |
 |---|---|---|
+| `banner` | `banner <text>` | print ASCII-art banner |
 | `beep` | `beep [Hz] [ms]` | PC speaker tone |
 | `calc` | `calc <expression>` | integer calculator |
 | `credits` | `credits` | about the project |
+| `fortune` | `fortune` | random programming quote |
 | `matrix` | `matrix [seconds]` | digital rain effect |
 | `play` | `play <notes.txt>` | play notes via PC speaker |
 | `saver` | `saver <mode> [sec]` | screen saver (0-3) |

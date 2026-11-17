@@ -18,6 +18,7 @@
 #include "iso9660.h"
 #include "usb.h"
 #include "extras.h"
+#include "users.h"
 #include "pci.h"
 #include "net.h"
 #include "store.h"
@@ -110,6 +111,7 @@ void kernel_main(u32 magic, u32 info_addr) {
         kprintf("[boot] store: archive unavailable (install/network features limited)\n");
 
     shell_init();
+    users_init();
 
     if (mb2_has_flag("--autotest")) {
         kprintf("[boot] --autotest: running non-interactive selftest\n");
@@ -117,7 +119,8 @@ void kernel_main(u32 magic, u32 info_addr) {
         for (;;) hlt();
     }
 
-    if (mb2_has_flag("--login")) login_run();
+    /* Boot into the login screen unless explicitly disabled. */
+    if (!mb2_has_flag("--nologin")) users_login();
     shell_banner();
     kprintf("  Network: %s\n", net_is_up() ? "online" : "offline");
     if (net_is_up()) {

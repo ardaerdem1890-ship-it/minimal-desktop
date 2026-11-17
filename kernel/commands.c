@@ -19,6 +19,7 @@
 #include "iso9660.h"
 #include "vga_hw.h"
 #include "extras.h"
+#include "users.h"
 #include "keyboard.h"
 #include "mouse.h"
 #include "gfx.h"
@@ -404,6 +405,130 @@ int cmd_cat(int argc, char **argv) {
  * sector-by-sector copy of that image to LBA 0. The image is shipped as the
  * Multiboot2 module "install-source". */
 
+static char sudo_line[256];
+static const char *build_line(int argc, char **argv) {
+    sudo_line[0] = 0;
+    for (int i = 0; i < argc; i++) {
+        if (strlen(sudo_line) + strlen(argv[i]) + 2 >= sizeof(sudo_line)) break;
+        if (i) strcat(sudo_line, " ");
+        strcat(sudo_line, argv[i]);
+    }
+    return sudo_line;
+}
+
+int cmd_sudo(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: sudo <command> [args]\n"); return -1; }
+    if (!users_sudo_auth()) return -1;
+    return shell_execute_silent(build_line(argc - 1, argv + 1));
+}
+
+
+int cmd_whoami(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    user_t *u = users_current();
+    kprintf("%s (uid %u, %s)\n", u->name, u->uid,
+            users_is_root() ? "root privileges" : "standard user");
+    return 0;
+}
+
+int cmd_users(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    kprintf("USER       UID  SUDO  HOME\n");
+    kprintf("---------  ---  ----  ---------------\n");
+    for (int i = 0; i < users_count(); i++) {
+        user_t *u = users_get(i);
+        kprintf("%-10s %3u  %-4s  /home/%s\n", u->name, u->uid,
+                u->can_sudo ? "yes" : "no", u->name);
+    }
+    return 0;
+}
+
+int cmd_useradd(int argc, char **argv) {
+    if (argc < 3) { kprintf("usage: useradd <name> <password> [--sudo]\n"); return -1; }
+    if (!users_is_root()) { kprintf("useradd: root only\n"); return -1; }
+    bool sudo = (argc > 3 && strcasecmp(argv[3], "--sudo") == 0);
+    return users_add(argv[1], argv[2], sudo);
+}
+
+int cmd_userdel(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: userdel <name>\n"); return -1; }
+    return users_del(argv[1]);
+}
+
+int cmd_passwd(int argc, char **argv) {
+    if (argc < 3) { kprintf("usage: passwd <user> <newpassword>\n"); return -1; }
+    return users_passwd(argv[1], argv[2]);
+}
+
+int cmd_su(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: su <username>\n"); return -1; }
+    user_t *u = users_find(argv[1]);
+    if (!u) { kprintf("su: user %s not found\n", argv[1]); return -1; }
+    char pass[32];
+    kprintf("Password for %s: ", u->name);
+    for (int len = 0;;) {
+        int k = kbd_getchar();
+        if (k < 0) { pit_sleep_ms(4); continue; }
+        if (k == KEY_ENTER) { pass[len] = 0; kprintf("\n"); break; }
+        if (k == KEY_BACKSPACE) { if (len > 0) len--; continue; }
+        if (k >= 32 && k < 127 && len < 31) pass[len++] = (char)k;
+    }
+    if (strcmp(pass, u->pass) != 0) { kprintf("su: incorrect password\n"); return -1; }
+    kprintf("su: switched to %s\n", u->name);
+    return 0;
+}
+
+int cmd_fortune(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    static const char *quotes[] = {
+        "The best way to predict the future is to invent it. - Alan Kay",
+        "Talk is cheap. Show me the code. - Linus Torvalds",
+        "Simplicity is prerequisite for reliability. - Dijkstra",
+        "Any sufficiently advanced technology is indistinguishable from magic. - Clarke",
+        "Programs must be written for people to read. - Abelson",
+        "The computer was born to solve problems that did not exist before. - Gates",
+        "There is no place like 127.0.0.1",
+        "Real programmers count from zero.",
+        "Made with 100% recycled electrons.",
+    };
+    kprintf("  %s\n", quotes[rand() % (sizeof(quotes)/sizeof(quotes[0]))]);
+    return 0;
+}
+
+int cmd_banner(int argc, char **argv) {
+    char text[64] = {0};
+    if (argc > 1) {
+        join_args(text, sizeof(text), argc, argv, 1);
+    } else {
+        strcpy(text, "MINIMAL");
+    }
+    kprintf("\n");
+    for (int row = 0; row < 5; row++) {
+        for (const char *p = text; *p; p++) {
+            char c = *p;
+            /* simplified: print # for letter presence from a tiny 3x5 set */
+            static const u8 font[26][5] = {
+                {7,5,7,5,5},{7,5,7,5,7},{7,4,4,4,7},{7,5,5,5,7},{7,4,6,4,7},
+                {7,4,6,4,4},{7,4,5,5,7},{5,5,7,5,5},{7,2,2,2,7},{1,1,1,5,2},
+                {5,6,4,5,5},{4,4,4,4,7},{7,7,7,5,5},{7,5,5,5,7},{7,5,7,4,7},
+                {7,5,7,1,1},{7,5,7,5,7},{7,5,7,6,5},{6,4,6,1,7},{7,2,2,2,2},
+                {5,5,5,5,7},{5,5,5,5,2},{5,5,7,7,5},{5,5,2,5,5},{5,2,2,2,5},{7,1,2,4,7}
+            };
+            int idx = -1;
+            if (c >= 'A' && c <= 'Z') idx = c - 'A';
+            else if (c >= 'a' && c <= 'z') idx = c - 'a';
+            if (idx >= 0) {
+                for (int bit = 4; bit >= 0; bit--)
+                    kprintf("%c", (font[idx][row] & (1u << bit)) ? '#' : ' ');
+            } else kprintf("    ");
+            kprintf(" ");
+        }
+        kprintf("\n");
+    }
+    kprintf("\n");
+    return 0;
+}
+
 int cmd_saver(int argc, char **argv) {
     int mode = argc > 1 ? atoi(argv[1]) : 0;
     int secs = argc > 2 ? atoi(argv[2]) : 10;
@@ -501,6 +626,20 @@ int cmd_weather(int argc, char **argv) {
     return 0;
 }
 
+static void read_install_line(char *buf, int max, bool hide) {
+    int len = 0;
+    for (;;) {
+        int k = kbd_getchar();
+        if (k < 0) { pit_sleep_ms(4); continue; }
+        if (k == KEY_ENTER) { buf[len] = 0; kprintf("\n"); return; }
+        if (k == KEY_BACKSPACE) { if (len > 0) { len--; if (!hide) kprintf("\b \b"); } continue; }
+        if (k >= 32 && k < 127 && len < max - 1) {
+            buf[len++] = (char)k;
+            if (!hide) kprintf("%c", (char)k);
+        }
+    }
+}
+
 int cmd_install(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
 
@@ -561,8 +700,31 @@ int cmd_install(int argc, char **argv) {
         kprintf("install: verification of sector 0 FAILED\n");
         return -1;
     }
-    kprintf("install: verified sector 0. Remove the CD/USB and reboot;\n");
-    kprintf("         the disk now boots Minimal Desktop on its own.\n");
+    kprintf("install: verified sector 0.\n\n");
+
+    /* Ask the installer to create their account. This is written into the
+     * installed disk's FAT data partition so it is there on first boot. */
+    kprintf("=== Create your account (or press Enter to keep ROOT/root) ===\n");
+    char name[32] = {0}, pass[32] = {0};
+    kprintf("username: ");
+    read_install_line(name, sizeof(name), false);
+    if (name[0]) {
+        kprintf("password: ");
+        read_install_line(pass, sizeof(pass), true);
+        if (!pass[0]) { strncpy(pass, "changeme", 31); }
+        if (!ramfs_lookup("/disk")) ramfs_create("/disk", FS_DIR);
+        if (!ramfs_lookup("/disk/users.cfg")) {
+            char line[128];
+            ksnprintf(line, sizeof(line), "ROOT 0 1 root\n");
+            fs_node_t *cfg = ramfs_create("/disk/users.cfg", FS_FILE);
+            if (cfg) ramfs_append(cfg, line, (u32)strlen(line));
+            ksnprintf(line, sizeof(line), "%s 1000 1 %s\n", name, pass);
+            if (cfg) ramfs_append(cfg, line, (u32)strlen(line));
+            fat_sync();
+            kprintf("account '%s' created on the installed disk.\n", name);
+        }
+    }
+    kprintf("Remove the CD/USB and reboot; the disk boots Minimal Desktop.\n");
     return 0;
 }
 

@@ -8,6 +8,7 @@
 #include "task.h"
 #include "store.h"
 #include "fat.h"
+#include "users.h"
 
 static const command_t commands[] = {
     { "help",     "System",   "help [command]",           "list commands or show usage",        cmd_help },
@@ -60,6 +61,8 @@ static const command_t commands[] = {
     { "slideshow", "Graphics", "slideshow [sec]",           "full-screen image slideshow",         cmd_slideshow },
     { "chkdsk",   "System",   "chkdsk",                    "check the FAT disk filesystem",       cmd_chkdsk },
     { "beep",     "Tools",    "beep [Hz] [ms]",           "PC speaker tone",                    cmd_beep },
+    { "fortune",  "Tools",    "fortune",                  "random programming quote",            cmd_fortune },
+    { "banner",   "Tools",    "banner <text>",            "print ASCII-art banner",              cmd_banner },
     { "credits",  "Tools",    "credits",                  "about the project",                  cmd_credits },
     { "store",      "Packages", "store list|install|remove|info|repo|status", "package manager", cmd_store },
     { "minipacket", "Packages", "minipacket -L | -I <pkg> | -R <pkg> | -S <pkg>",     "package manager (install: -I)", cmd_minipacket },
@@ -72,6 +75,13 @@ static const command_t commands[] = {
     { "keymap",     "System",   "keymap list|next|<layout>", "switch keyboard layout (Alt+Shift)", cmd_keymap },
     { "crash",      "System",   "crash",                    "deliberately fault (crash screen test)", cmd_crash },
     { "install",    "System",   "install",                  "write the OS image to the first ATA disk", cmd_install },
+    { "sudo",     "System",   "sudo <command>",            "run a command as root",               cmd_sudo },
+    { "whoami",   "System",   "whoami",                   "show current user",                     cmd_whoami },
+    { "users",    "System",   "users",                    "list all accounts",                     cmd_users },
+    { "useradd",  "System",   "useradd <name> <pass>",    "create a new user (root)",              cmd_useradd },
+    { "userdel",  "System",   "userdel <name>",           "delete a user (root)",                  cmd_userdel },
+    { "passwd",   "System",   "passwd <user> <new>",      "change a password",                     cmd_passwd },
+    { "su",       "System",   "su <user>",                "switch user",                           cmd_su },
     { "ifconfig",   "Network",  "ipconfig [dhcp|set ...]",  "show or configure the network",      cmd_ifconfig },
     { "ipconfig",   "Network",  "ipconfig [dhcp|set ...]",  "alias for ifconfig",                 cmd_ifconfig },
     { "ping",     "Network",  "ping <ip|host> [count]",   "ICMP echo request",                  cmd_ping },
@@ -135,7 +145,12 @@ int shell_execute(const char *line) {
         kprintf("%s: command not found. Try 'help'.\n", argv[0]);
         return -1;
     }
+    if (!users_can_run(argv[0])) {
+        kprintf("%s: permission denied (root only). Use 'sudo %s'.\n", argv[0], argv[0]);
+        return -1;
+    }
     int rc = c->fn(argc, argv);
+    users_drop_elevation();
     return rc;
 }
 
@@ -173,6 +188,8 @@ void shell_banner(void) {
     console_set_color(VGA_GREEN, bg);
     kprintf("  boot ok: VGA text, PIT %u Hz, RAMFS mounted, store %d packages\n",
             pit_get_frequency(), store_package_count());
+    if (!ramfs_lookup("/disk"))
+        kprintf("  LIVE CD: login as ROOT with password root. Run 'install' to write to disk.\n");
     console_reset_color();
     kprintf("\n");
 }
@@ -182,7 +199,9 @@ void shell_banner(void) {
 /* ------------------------------------------------------------------------- */
 static void prompt(void) {
     console_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
-    kprintf("minimal@os");
+    user_t *u = users_current();
+    if (u) kprintf("%s@os", u->name);
+    else kprintf("minimal@os");
     console_set_color(VGA_WHITE, VGA_BLACK);
     kprintf(":");
     console_set_color(VGA_LIGHT_BLUE, VGA_BLACK);

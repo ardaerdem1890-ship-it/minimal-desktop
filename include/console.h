@@ -3,8 +3,8 @@
 
 #define OS_NAME        "Minimal Desktop"
 #define OS_SHORTNAME   "minimal_desktop"
-#define OS_VERSION     "1.5.0"
-#define OS_CODENAME    "Everything"
+#define OS_VERSION     "1.6.0"
+#define OS_CODENAME    "Users"
 #define OS_BUILD       __DATE__ " " __TIME__
 #define OS_ARCH        "x86 (i386 protected mode)"
 
