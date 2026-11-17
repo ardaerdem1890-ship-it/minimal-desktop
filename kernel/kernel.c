@@ -17,6 +17,7 @@
 #include "atapi.h"
 #include "iso9660.h"
 #include "usb.h"
+#include "extras.h"
 #include "pci.h"
 #include "net.h"
 #include "store.h"
@@ -116,6 +117,7 @@ void kernel_main(u32 magic, u32 info_addr) {
         for (;;) hlt();
     }
 
+    if (mb2_has_flag("--login")) login_run();
     shell_banner();
     kprintf("  Network: %s\n", net_is_up() ? "online" : "offline");
     if (net_is_up()) {

@@ -6,6 +6,11 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.5.0 "Everything"
+
+- **15 new features in one release**: screen savers (`saver 0..3`), GUI maximize/move/close shortcuts (Ctrl+M/Q/Arrows), ASCII-art `sysinfo`, theme persistence, `weather`, `lynx` text browser, PC-speaker `play`, `backup`/`restore`, 13 sample images, full-screen `slideshow`, `chkdsk`, a login screen (`--login` boot entry), and more.
+- All v1.4.x fixes retained (FAT disk persistence, crash screen, font restore, layouts, e1000).
+
 ## What's new in 1.4.1 "Nova+"
 
 - **Persistent disk files**: FAT12/16 driver mounts the data partition at `/disk`. `mount`, `sync`, `format /disk`. Files saved there survive reboot after `install`.
@@ -199,7 +204,7 @@ the button becomes active and shows the size.
 
 ## Complete command reference
 
-Every command registered in `kernel/shell.c` (60 total), grouped by category.
+Every command registered in `kernel/shell.c` (68 total), grouped by category.
 
 ### Clock
 
@@ -212,6 +217,7 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 
 | Command | Usage | Description |
 |---|---|---|
+| `backup` | `backup <file>` | back up RAMFS to a /disk file |
 | `cat` | `cat <file>` | print a file |
 | `cd` | `cd [path]` | change directory |
 | `cdrom` | `cdrom` | mount the boot CD at /cd |
@@ -232,6 +238,7 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 | `new` | `new <file>` | create and edit a new text file |
 | `pwd` | `pwd` | print working directory |
 | `read` | `read <file>` | alias for less |
+| `restore` | `restore <file>` | restore a RAMFS backup |
 | `rm` | `rm <path>` | remove a file or directory |
 | `sync` | `sync` | flush disk file changes |
 | `touch` | `touch <file>` | create an empty file |
@@ -252,6 +259,7 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 |---|---|---|
 | `imgview` | `imgview` | open the GUI image viewer |
 | `miniland` | `miniland` | Miniland tiling WM (needs module) |
+| `slideshow` | `slideshow [sec]` | full-screen image slideshow |
 | `startgui` | `startgui` | graphical desktop (needs module) |
 
 ### Network
@@ -261,9 +269,11 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 | `curl` | `curl <http://url>` | fetch an HTTP resource |
 | `ifconfig` | `ipconfig [dhcp\|set ...]` | show or configure the network |
 | `ipconfig` | `ipconfig [dhcp\|set ...]` | alias for ifconfig |
+| `lynx` | `lynx <url>` | text-mode web browser |
 | `netstat` | `netstat` | network statistics |
 | `nslookup` | `nslookup <host>` | resolve a DNS name |
 | `ping` | `ping <ip\|host> [count]` | ICMP echo request |
+| `weather` | `weather` | fetch current weather over HTTP |
 
 ### Packages
 
@@ -276,6 +286,7 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 
 | Command | Usage | Description |
 |---|---|---|
+| `chkdsk` | `chkdsk` | check the FAT disk filesystem |
 | `clear` | `clear` | clear the screen |
 | `crash` | `crash` | deliberately fault (crash screen test) |
 | `drivers` | `drivers` | list loaded drivers and devices |
@@ -299,6 +310,8 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 | `calc` | `calc <expression>` | integer calculator |
 | `credits` | `credits` | about the project |
 | `matrix` | `matrix [seconds]` | digital rain effect |
+| `play` | `play <notes.txt>` | play notes via PC speaker |
+| `saver` | `saver <mode> [sec]` | screen saver (0-3) |
 | `theme` | `theme <name\|fg> [bg]` | change console colours |
 
 ### Keyboard / GUI shortcuts
@@ -321,3 +334,7 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 | `--autotest` | run the 18-check self test, report on COM1, exit via ISA debug port 0x501 |
 | `--safe` | skip store install and network activity |
 | `--installtest` | run the disk installer without the confirmation prompt |
+
+---
+
+**Note: this whole thing was vibe coded.**

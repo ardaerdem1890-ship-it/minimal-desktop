@@ -63,6 +63,7 @@ static int launch_req = GUI_LAUNCH_NONE;
 static bool speaker_muted = false;
 static int speaker_volume = 2; /* 0..3 */
 static int shot_counter;
+static int maximized_win = -1;
 static u32 super_last;
 
 /* terminal state */
@@ -747,7 +748,7 @@ static void draw_start_menu(void) {
         gfx_icon(cellx + 1, celly + 1, start_icons[i], cols[i]);
         gfx_text(cellx + 19, celly + 4, start_labels[i], GUI_WHITE);
     }
-    gfx_text(x + 4, y + h - 10, "Click an item or press Super", GUI_GREY);
+    gfx_text(x + 4, y + h - 10, "Ctrl+M max  Ctrl+Q close", GUI_GREY);
 }
 
 static void draw_cursor(int mx, int my) {    for (int i = 0; i < 10; i++) {
@@ -1035,6 +1036,32 @@ int gui_run(void) {
                 key = kbd_getchar(); continue;
             }
             if (key == KEY_TAB && kbd_alt_down()) { alt_tab(); key = kbd_getchar(); continue; }
+            if (key == 'q' && kbd_ctrl_down() && focus >= 0 && focus < WIN_COUNT) {
+                wins[focus].open = false; if (maximized_win == focus) maximized_win = -1;
+                key = kbd_getchar(); continue;
+            }
+            if (key == 'm' && kbd_ctrl_down() && focus >= 0 && focus < WIN_COUNT) {
+                gui_win_t *w = &wins[focus];
+                if (maximized_win == focus) {
+                    w->x = 10; w->y = 14; w->w = 214; w->h = 124;
+                    maximized_win = -1;
+                } else {
+                    w->x = 0; w->y = 0; w->w = GFX_WIDTH; w->h = TASKBAR_Y;
+                    maximized_win = focus;
+                }
+                key = kbd_getchar(); continue;
+            }
+            if (kbd_ctrl_down() && (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN)) {
+                gui_win_t *w = &wins[focus];
+                int step = 8;
+                if (key == KEY_LEFT) w->x -= step;
+                if (key == KEY_RIGHT) w->x += step;
+                if (key == KEY_UP) w->y -= step;
+                if (key == KEY_DOWN) w->y += step;
+                if (w->x < 0) w->x = 0;
+                if (w->y < 0) w->y = 0;
+                key = kbd_getchar(); continue;
+            }
             if (key == KEY_PRTSC && kbd_ctrl_down()) { save_screenshot(); key = kbd_getchar(); continue; }
             if (key == KEY_PRTSC) { save_screenshot(); key = kbd_getchar(); continue; }
             /* volume keys: F1/F2 as mute/volume toggle */

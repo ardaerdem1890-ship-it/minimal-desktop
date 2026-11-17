@@ -177,6 +177,40 @@ static u32 px_textcard(int x, int y, u32 seed) {
     return 0x00004020;
 }
 
+static u32 px_mandel(int x, int y, u32 s) {
+    (void)s;
+    double cx = (x - 80) / 40.0, cy = (y - 60) / 40.0;
+    double zx = 0, zy = 0;
+    int it = 0;
+    while (zx*zx + zy*zy < 4 && it < 40) {
+        double t = zx*zx - zy*zy + cx;
+        zy = 2*zx*zy + cy; zx = t; it++;
+    }
+    int v = it * 6;
+    return (u32)(0xFF000000u | ((v & 0xFF) << 16) | ((v*2 & 0xFF) << 8) | (v*3 & 0xFF));
+}
+
+static u32 px_waves(int x, int y, u32 s) {
+    (void)s;
+    int v = (int)(40*((x*3)/16.0) + 30*((y*5)/16.0));
+    int r = (v/2) & 0xFF, g = (v/3) & 0xFF, b = (v/4) & 0xFF;
+    return 0xFF000000u | ((u32)b<<16) | ((u32)g<<8) | (u32)r;
+}
+
+static u32 px_check3d(int x, int y, u32 s) {
+    (void)s;
+    int cx = (x/20), cy = (y/20);
+    int shade = ((cx+cy)&1) ? 180 : 40;
+    return 0xFF000000u | ((u32)shade<<16) | ((u32)shade<<8) | (u32)shade;
+}
+
+static u32 px_logoc(int x, int y, u32 s) {
+    (void)s;
+    int dx=x-80, dy=y-60;
+    if (dx*dx+dy*dy > 50*50) return 0xFF102030u;
+    return 0xFF00FF80u;
+}
+
 static u32 px_grad0(int x, int y, u32 s) { (void)s; return px_gradient(x, y, 0); }
 static u32 px_grad1(int x, int y, u32 s) { (void)s; return px_gradient(x, y, 1); }
 static u32 px_grad2(int x, int y, u32 s) { (void)s; return px_gradient(x, y, 3); }
@@ -196,5 +230,9 @@ int bmp_sample_images(void) {
     write_bmp("/pictures/smiley.bmp",  160, 120, px_smile);
     write_bmp("/pictures/maze.bmp",    160, 120, px_mazex);
     write_bmp("/pictures/hello.bmp",   160, 120, px_text);
+    write_bmp("/pictures/mandel.bmp",  160, 120, px_mandel);
+    write_bmp("/pictures/waves.bmp",   160, 120, px_waves);
+    write_bmp("/pictures/check3d.bmp", 160, 120, px_check3d);
+    write_bmp("/pictures/logo.bmp",    160, 120, px_logoc);
     return 0;
 }

@@ -18,6 +18,7 @@
 #include "atapi.h"
 #include "iso9660.h"
 #include "vga_hw.h"
+#include "extras.h"
 #include "keyboard.h"
 #include "mouse.h"
 #include "gfx.h"
@@ -402,6 +403,103 @@ int cmd_cat(int argc, char **argv) {
  * isohybrid (GRUB BIOS boot sector + ISO9660 payload), so installing is just a
  * sector-by-sector copy of that image to LBA 0. The image is shipped as the
  * Multiboot2 module "install-source". */
+
+int cmd_saver(int argc, char **argv) {
+    int mode = argc > 1 ? atoi(argv[1]) : 0;
+    int secs = argc > 2 ? atoi(argv[2]) : 10;
+    if (mode < 0 || mode > 3) { kprintf("usage: saver <0=matrix|1=stars|2=logo|3=plasma> [seconds]\n"); return -1; }
+    if (secs < 1) secs = 1;
+    screensaver_run(mode, secs);
+    return 0;
+}
+
+int cmd_play(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: play <notes.txt>   (e.g. C4 E4 G4 C5)\n"); return -1; }
+    return music_play(argv[1]);
+}
+
+int cmd_backup(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: backup <file on /disk>\n"); return -1; }
+    return backup_create(argv[1]);
+}
+
+int cmd_restore(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: restore <backup file>\n"); return -1; }
+    return backup_restore(argv[1]);
+}
+
+/* Convert HTML to plain text in a pager-friendly form. */
+static void html_strip(const char *in, char *out, int max) {
+    int o = 0;
+    bool tag = false;
+    while (*in && o < max - 1) {
+        if (*in == '<') { tag = true; in++; continue; }
+        if (*in == '>') { tag = false; in++; if (o < max-1) out[o++] = '\n'; continue; }
+        if (tag) { in++; continue; }
+        char c = *in++;
+        if (c == '&') {
+            if (strncmp(in, "amp;", 4) == 0) { c = '&'; in += 3; }
+            else if (strncmp(in, "lt;", 3) == 0) { c = '<'; in += 2; }
+            else if (strncmp(in, "gt;", 3) == 0) { c = '>'; in += 2; }
+            else if (strncmp(in, "nbsp;", 5) == 0) { c = ' '; in += 4; }
+        }
+        out[o++] = c;
+    }
+    out[o] = 0;
+}
+
+int cmd_slideshow(int argc, char **argv) {
+    int secs = argc > 1 ? atoi(argv[1]) : 20;
+    if (secs < 1) secs = 1;
+    return slideshow_run(secs);
+}
+
+int cmd_chkdsk(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    return chkdsk_fat();
+}
+
+int cmd_lynx(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: lynx <url>\n"); return -1; }
+    if (strcmp(argv[1], "about:home") == 0) {
+        kprintf("Minimal Lynx\nType 'lynx <url>' to fetch a page.\n");
+        return 0;
+    }
+    if (!net_is_up()) { kprintf("lynx: network offline\n"); return -1; }
+    static char body[8192];
+    static char text[8192];
+    int len = 0;
+    if (net_http_get(argv[1], body, sizeof(body), &len) != 0 || len <= 0) {
+        kprintf("lynx: failed to fetch %s (status %d)\n", argv[1], net_http_status());
+        return -1;
+    }
+    html_strip(body, text, sizeof(text));
+    /* print up to 60 lines */
+    char *p = text;
+    int lines = 0;
+    while (*p && lines < 60) {
+        char *nl = strchr(p, '\n');
+        if (nl) *nl = 0;
+        if (*p) { kprintf("%s\n", p); lines++; }
+        if (!nl) break;
+        p = nl + 1;
+    }
+    kprintf("--- %d lines (status %d) ---\n", lines, net_http_status());
+    return 0;
+}
+
+int cmd_weather(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    if (!net_is_up()) { kprintf("weather: network offline\n"); return -1; }
+    char out[512];
+    int len = 0;
+    if (net_http_get("http://wttr.in/?format=3", out, sizeof(out), &len) != 0 || len <= 0) {
+        kprintf("weather: fetch failed\n"); return -1;
+    }
+    out[len] = 0;
+    kprintf("%s\n", out);
+    return 0;
+}
 
 int cmd_install(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
@@ -884,7 +982,8 @@ int cmd_theme(int argc, char **argv) {
         return -1;
     }
     console_set_theme(fg, bg);
-    kprintf("theme: fg=%u bg=%u applied\n", fg, bg);
+    theme_save();
+    kprintf("theme: fg=%u bg=%u applied (saved to /disk)\n", fg, bg);
     return 0;
 }
 

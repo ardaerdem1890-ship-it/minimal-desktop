@@ -1,9 +1,19 @@
 [
   {
-    "version": "1.4.1",
-    "label": "v1.4.1 (current)",
+    "version": "1.5.0",
+    "label": "v1.5.0 (current)",
     "date": "2026-11-17",
     "latest": true,
+    "file": "downloads/minimal_desktop_v1.5.0.iso",
+    "notes": "Everything update: ASCII sysinfo, theme presets + persistence, 4 screensavers, 13 sample images, weather, lynx terminal browser, PC speaker music player, GUI window maximize/move/close shortcuts, backup/restore, full-screen slideshow, FAT chkdsk, login screen with users on /disk, plus all prior fixes.",
+    "sha256": "15b2a8f86a3561a483d9813cf34b1a6f21b54058c2a4a0d5190a99534d22b799",
+    "size": 32583680
+  },
+  {
+    "version": "1.4.1",
+    "label": "v1.4.1",
+    "date": "2026-11-17",
+    "latest": false,
     "file": "downloads/minimal_desktop_v1.4.1.iso",
     "notes": "v1.4.1 feature update: FAT12/16 read-write disk persistence (/disk), ATAPI CD + ISO9660 reader (/cd), USB OHCI stack, full file tools (cp/mv/tree/find/du/new), ipconfig dhcp/set/status, image viewer with 8 sample images, editor save-as and line numbers. Plus all v1.4.0 stability fixes (crash screen, font, layouts, e1000).",
     "sha256": "b4d2e648247ed104bf9f3558ae77f3151671298b37967aa7022f982a7882cbd7",

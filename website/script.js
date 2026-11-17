@@ -11,7 +11,7 @@
   const bootScreen = $("#boot-screen");
   const bootLines = [
     { t: "GRUB 2.12  Multiboot2  ->  /boot/kernel.elf", c: "dim" },
-    { t: "Minimal Desktop 1.4.1 (mdos-i386)  [Nova+]", c: "hi" },
+    { t: "Minimal Desktop 1.5.0 (mdos-i386)  [Everything]", c: "hi" },
     { t: "memory: 256 MiB  |  cmdline: --autotest", c: "dim" },
     { t: "[ OK ] serial COM1 @ 115200 8N1", c: "" },
     { t: "[ OK ] VGA text mode 80x25, 16 colours", c: "" },
@@ -24,7 +24,7 @@
     { t: "[ OK ] DHCP lease 10.0.2.15/24 gw 10.0.2.2", c: "cyan" },
     { t: "[ OK ] DNS 10.0.2.3  link UP 100 Mbit", c: "cyan" },
     { t: "", c: "" },
-    { t: "Minimal Desktop 1.4.1  —  type 'help' to begin", c: "amber" },
+    { t: "Minimal Desktop 1.5.0  —  type 'help' to begin", c: "amber" },
     { t: "minimal@os:~$ ", c: "prompt" }
   ];
 
