@@ -6,7 +6,7 @@
     "latest": true,
     "file": "downloads/minimal_desktop_v1.4.1.iso",
     "notes": "v1.4.1 feature update: FAT12/16 read-write disk persistence (/disk), ATAPI CD + ISO9660 reader (/cd), USB OHCI stack, full file tools (cp/mv/tree/find/du/new), ipconfig dhcp/set/status, image viewer with 8 sample images, editor save-as and line numbers. Plus all v1.4.0 stability fixes (crash screen, font, layouts, e1000).",
-    "sha256": "800eea21495072906f0099f08db7069c9fdff8a7014cc59c1576d5eb0e3fadfd",
+    "sha256": "b4d2e648247ed104bf9f3558ae77f3151671298b37967aa7022f982a7882cbd7",
     "size": 32550912
   },
   {
