@@ -250,6 +250,7 @@ int ramfs_write(fs_node_t *node, const void *buf, u32 len, u32 offset) {
     memcpy(node->data + offset, buf, len);
     if (need > node->size) node->size = need;
     bytes_used += node->size;
+    node->dirty = true;
     return (int)len;
 }
 
@@ -266,6 +267,7 @@ int ramfs_truncate(fs_node_t *node, u32 size) {
         node->data = NULL;
         node->capacity = 0;
         node->size = 0;
+        node->dirty = true;
         return 0;
     }
     if (size > node->capacity) {
@@ -280,6 +282,7 @@ int ramfs_truncate(fs_node_t *node, u32 size) {
     }
     node->size = size;
     bytes_used += node->size;
+    node->dirty = true;
     return 0;
 }
 

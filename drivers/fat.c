@@ -122,22 +122,26 @@ static void fat_name(const char *name, u8 out[11]) {
 }
 
 static void display_name(const u8 raw[11], char out[16], u8 ntres) {
+    (void)ntres;
     int n = 0;
+    /* Always lowercase: FAT stores names in upper case, but every other part
+     * of this OS uses lower-case file names, so normalize on mount. */
     for (int i = 0; i < 8 && raw[i] != ' '; i++) {
         char c = (char)raw[i];
-        if ((ntres & 0x08) && c >= 'A' && c <= 'Z') c += 32;
+        if (c >= 'A' && c <= 'Z') c += 32;
         out[n++] = c;
     }
     if (raw[8] != ' ') {
         out[n++] = '.';
         for (int i = 8; i < 11 && raw[i] != ' '; i++) {
             char c = (char)raw[i];
-            if ((ntres & 0x10) && c >= 'A' && c <= 'Z') c += 32;
+            if (c >= 'A' && c <= 'Z') c += 32;
             out[n++] = c;
         }
     }
     out[n] = 0;
 }
+
 
 bool fat_present(void) { return mounted; }
 u32  fat_part_lba(void) { return part_lba; }
@@ -265,19 +269,22 @@ static void load_dir(const char *parent_path, u32 cluster) {
             u32 size = entries[i].size;
             if (size > MAX_FILE_BYTES) size = MAX_FILE_BYTES;
             if (size) {
-                u8 *data = (u8 *)kmalloc(size);
+                u32 cluster_bytes = sectors_per_cluster * SECTOR;
+                u8 *data = (u8 *)kmalloc(cluster_bytes);
                 if (!data) continue;
                 u32 cur = c, off = 0, guard = 0;
                 while (cur >= 2 && cur < cluster_count + 2 && off < size && guard++ < 256) {
-                    u32 chunk = sectors_per_cluster * SECTOR;
-                    if (chunk > size - off) chunk = size - off;
-                    if (!read_cluster(cur, data + off)) break;
+                    if (!read_cluster(cur, data)) break;   /* reads a whole cluster */
+                    u32 chunk = size - off;
+                    if (chunk > cluster_bytes) chunk = cluster_bytes;
+                    int wr = ramfs_write(f, data, chunk, off);
+                    if (wr != (int)chunk) break;
                     off += chunk;
                     u32 next = fat_get(cur);
-                    if (next >= 0xFFF8 || next == 0) break;
+                    if (next >= 0xFFF8 || next == 0 || next == 0xFFF) break;
                     cur = next;
                 }
-                ramfs_write(f, data, off, 0);
+                f->dirty = false;
                 kfree(data);
             } else {
                 ramfs_truncate(f, 0);
@@ -382,6 +389,12 @@ int fat_sync(void) {
     bool any_dirty = false;
     sync_count = 0;
     collect_tree(root_node);
+    /* assign contiguous cluster runs starting just after the reserved pair */
+    u32 next_cluster = 2;
+    for (int i = 0; i < sync_count; i++) {
+        sync_nodes[i].start = next_cluster;
+        next_cluster += sync_nodes[i].clusters;
+    }
     for (int i = 0; i < sync_count; i++) if (sync_nodes[i].node->dirty) any_dirty = true;
     if (!any_dirty) return 0;
 
@@ -444,7 +457,7 @@ int fat_sync(void) {
     u8 *rootbuf = (u8 *)kmalloc(root_sectors * SECTOR);
     if (!rootbuf) return -1;
     memset(rootbuf, 0, root_sectors * SECTOR);
-    memcpy(rootbuf, root_entries_buf, (rn + 1) * sizeof(fat_dirent_t));
+    if (rn) memcpy(rootbuf, root_entries_buf, rn * sizeof(fat_dirent_t));
     write_sectors(root_lba, root_sectors, rootbuf);
     kfree(rootbuf);
 

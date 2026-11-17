@@ -5,6 +5,7 @@
 #include "io.h"
 #include "string.h"
 #include "font8x8.h"
+#include "vga_font.h"
 
 #define VRAM ((u8 *)0xA0000)
 #define FB_SIZE (GFX_WIDTH * GFX_HEIGHT)
@@ -89,7 +90,10 @@ bool gfx_enter(void) {
 void gfx_leave(void) {
     if (!active) return;
     vga_hw_set_text_mode();
-    if (font_saved) vga_hw_write_font(saved_font, sizeof(saved_font));
+    /* Always re-upload a known-good font. Some emulated VGAs (VirtualBox's)
+     * do not preserve plane 2 across a mode 13h switch, so reading it back
+     * produces garbage. The built-in font is the standard IBM VGA 8x8 set. */
+    vga_hw_write_font(vga_builtin_font, sizeof(vga_builtin_font));
     memcpy((void *)0xB8000, saved_text, sizeof(saved_text));
     gfx_init_text_palette();
     console_gotoxy(saved_row, saved_col);
@@ -101,7 +105,7 @@ void gfx_leave(void) {
  * palette all have to be put back before anything can be printed. */
 void gfx_recover_text(void) {
     vga_hw_set_text_mode();
-    if (font_saved) vga_hw_write_font(saved_font, sizeof(saved_font));
+    vga_hw_write_font(vga_builtin_font, sizeof(vga_builtin_font));
     gfx_init_text_palette();
     console_gotoxy(saved_row, saved_col);
     active = false;

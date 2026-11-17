@@ -17,6 +17,7 @@
 #include "fat.h"
 #include "atapi.h"
 #include "iso9660.h"
+#include "vga_hw.h"
 #include "keyboard.h"
 #include "mouse.h"
 #include "gfx.h"
@@ -401,6 +402,7 @@ int cmd_cat(int argc, char **argv) {
  * isohybrid (GRUB BIOS boot sector + ISO9660 payload), so installing is just a
  * sector-by-sector copy of that image to LBA 0. The image is shipped as the
  * Multiboot2 module "install-source". */
+
 int cmd_install(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
 

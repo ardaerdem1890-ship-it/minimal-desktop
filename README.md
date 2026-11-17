@@ -321,7 +321,3 @@ Every command registered in `kernel/shell.c` (60 total), grouped by category.
 | `--autotest` | run the 18-check self test, report on COM1, exit via ISA debug port 0x501 |
 | `--safe` | skip store install and network activity |
 | `--installtest` | run the disk installer without the confirmation prompt |
-
----
-
-**Note: this whole thing was vibe coded.**

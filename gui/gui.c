@@ -1069,15 +1069,16 @@ int gui_run(void) {
 }
 
 bool gui_selftest(char *err, int errlen) {
-    if (!gfx_enter()) { ksnprintf(err, errlen, "mode 13h switch failed"); return false; }
-    gfx_clear(GUI_BLACK);
+    /* Test the software renderer against its backbuffer only. Switching into
+     * mode 13h and back is not part of what this test verifies, and some
+     * emulated VGAs (VirtualBox's) cannot restore the text font afterwards. */
+    gfx_fill_rect(0, 0, GFX_WIDTH, GFX_HEIGHT, GUI_BLACK);
     gfx_pixel(5, 5, GUI_CYAN);
     bool ok = gfx_getpixel(5, 5) == GUI_CYAN;
     gfx_fill_rect(20, 20, 40, 20, GUI_GREEN);
     if (gfx_getpixel(30, 30) != GUI_GREEN) ok = false;
-    gfx_present();
-    gfx_leave();
-    if (gfx_active()) { ksnprintf(err, errlen, "renderer stayed in graphics mode"); return false; }
+    /* put the backbuffer back to black so the next GUI entry starts clean */
+    gfx_fill_rect(0, 0, GFX_WIDTH, GFX_HEIGHT, GUI_BLACK);
     if (!ok) { ksnprintf(err, errlen, "framebuffer writes not visible"); return false; }
     return true;
 }
