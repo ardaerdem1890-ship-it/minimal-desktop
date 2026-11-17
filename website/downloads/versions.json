@@ -6,7 +6,7 @@
     "latest": true,
     "file": "downloads/minimal_desktop_v1.6.0.iso",
     "notes": "User system: boots to a login screen, ROOT/root on live CD (note shown), account creation during install, sudo/root permissions, useradd/userdel/passwd/users/whoami/su/sudo, fortune and banner commands. All prior features retained.",
-    "sha256": "6b517751f6c88629ff6bbb2a6f3832857ed97a0fd17964ec43dde88b3b18c8a0",
+    "sha256": "5923626d9592ad363806e6fd27fe0df3154cabb63fd0e9e1f554e8fcbd4a42ed",
     "size": 32604160
   },
   {
