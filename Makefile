@@ -71,6 +71,8 @@ $(ISO): $(KERNEL) $(STORE) boot/grub.cfg boot/install_source.cfg
 	cp $(STORE) $(ISODIR)/boot/store.img
 	cp boot/grub.cfg $(ISODIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/base.iso $(ISODIR) >/dev/null
+	# Add a FAT16 data partition so /disk survives a reboot after install.
+	$(PYTHON) tools/append_data_part.py $(BUILD)/base.iso >/dev/null
 	# The base ISO is isohybrid: written raw to a disk it boots through GRUB.
 	# Embed it as a module so the `install` command can stream it to ATA.
 	cp $(BUILD)/base.iso $(ISODIR)/boot/install_source.img

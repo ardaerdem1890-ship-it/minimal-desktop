@@ -16,6 +16,9 @@ typedef struct fs_node {
     struct fs_node *parent;
     struct fs_node *children;
     struct fs_node *next;
+    u32  dev_id;        /* 0 = RAMFS, 1 = FAT (set by the mount code) */
+    u32  dev_ino;       /* FAT starting cluster */
+    bool dirty;         /* needs writing back to its backing store */
 } fs_node_t;
 
 void  ramfs_init(void);

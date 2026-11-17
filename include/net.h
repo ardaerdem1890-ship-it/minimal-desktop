@@ -34,6 +34,8 @@ int  net_http_get(const char *url, char *out, int max, int *out_len);
 void ifconfig_print(void);
 bool net_selftest(char *err, int errlen);
 bool net_dhcp_acquired(void);
+bool net_dhcp_renew(void);
+void net_set_static(u32 ip, u32 mask, u32 gw, u32 dns);
 
 int  net_http_status(void);
 

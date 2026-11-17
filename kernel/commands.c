@@ -14,6 +14,9 @@
 #include "pci.h"
 #include "hwinfo.h"
 #include "ata.h"
+#include "fat.h"
+#include "atapi.h"
+#include "iso9660.h"
 #include "keyboard.h"
 #include "mouse.h"
 #include "gfx.h"
@@ -507,6 +510,188 @@ int cmd_read(int argc, char **argv) {
     return pager_run(argv[1]);
 }
 
+/* copy a file (RAMFS, or the RAM mirror of a mounted filesystem) */
+int cmd_cdrom(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    if (!atapi_present()) { kprintf("cdrom: no ATAPI device on secondary IDE\n"); return -1; }
+    if (iso9660_mount()) { iso9660_info(); return 0; }
+    kprintf("cdrom: could not read ISO9660 filesystem\n"); return -1;
+}
+
+int cmd_mount(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    if (fat_present()) {
+        fat_info();
+        kprintf("mounted at %s\n", "/disk");
+        return 0;
+    }
+    if (fat_automount()) return 0;
+    kprintf("mount: no FAT data partition found\n");
+    return -1;
+}
+
+int cmd_sync(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    if (!fat_present()) { kprintf("sync: /disk is not mounted\n"); return -1; }
+    return fat_sync();
+}
+
+int cmd_format(int argc, char **argv) {
+    if (argc < 2 || strcmp(argv[1], "/disk") != 0) {
+        kprintf("usage: format /disk   (erases the data partition)\n"); return -1;
+    }
+    if (!fat_present()) { kprintf("format: /disk is not mounted\n"); return -1; }
+    kprintf("format: this erases all files on /disk. Type YES to continue: ");
+    int k = kbd_wait_key(5000);
+    if (k != 'Y') { kprintf("\nformat: aborted\n"); return -1; }
+    kprintf("\n");
+    if (fat_format(fat_part_lba()) != 0) { kprintf("format: failed\n"); return -1; }
+    kprintf("format: done. Remount to use the empty filesystem.\n");
+    return 0;
+}
+
+int cmd_cp(int argc, char **argv) {
+    if (argc != 3) { kprintf("usage: cp <source> <destination>\n"); return -1; }
+    fs_node_t *src = ramfs_lookup(argv[1]);
+    if (!src || src->type != FS_FILE) {
+        kprintf("cp: %s: no such file\n", argv[1]); return -1;
+    }
+    fs_node_t *dst = ramfs_lookup(argv[2]);
+    if (dst && dst->type == FS_DIR) {
+        kprintf("cp: %s is a directory (give a full file name)\n", argv[2]); return -1;
+    }
+    if (!dst) {
+        fs_node_t *parent = ramfs_parent_of(argv[2]);
+        if (!parent || parent->type != FS_DIR) {
+            kprintf("cp: bad destination path\n"); return -1;
+        }
+        dst = ramfs_create(argv[2], FS_FILE);
+    }
+    if (!dst) { kprintf("cp: cannot create %s\n", argv[2]); return -1; }
+
+    char buf[512];
+    u32 off = 0;
+    if (ramfs_truncate(dst, 0) != 0) { kprintf("cp: truncate failed\n"); return -1; }
+    while (off < src->size) {
+        u32 want = src->size - off;
+        if (want > sizeof(buf)) want = sizeof(buf);
+        int got = ramfs_read(src, buf, want, off);
+        if (got <= 0) break;
+        if (ramfs_write(dst, buf, (u32)got, off) != got) {
+            kprintf("cp: short write\n"); return -1;
+        }
+        off += (u32)got;
+    }
+    kprintf("cp: %s -> %s (%u bytes)\n", argv[1], argv[2], off);
+    return 0;
+}
+
+int cmd_mv(int argc, char **argv) {
+    if (argc != 3) { kprintf("usage: mv <source> <destination>\n"); return -1; }
+    fs_node_t *src = ramfs_lookup(argv[1]);
+    if (!src || src->type != FS_FILE) {
+        kprintf("mv: %s: no such file\n", argv[1]); return -1;
+    }
+    if (cmd_cp(argc, argv) != 0) return -1;
+    if (ramfs_unlink(argv[1]) != 0) {
+        kprintf("mv: could not remove source %s\n", argv[1]); return -1;
+    }
+    return 0;
+}
+
+static void tree_walk(fs_node_t *dir, int depth, int *files, int *dirs) {
+    if (depth > 12) return;
+    fs_node_t *child;
+    for (int i = 0; ramfs_readdir(dir, i, &child) == 0; i++) {
+        for (int d = 0; d < depth; d++) kprintf(d == depth - 1 ? "|-- " : "|   ");
+        if (child->type == FS_DIR) {
+            kprintf("%s/\n", child->name);
+            (*dirs)++;
+            tree_walk(child, depth + 1, files, dirs);
+        } else {
+            kprintf("%s (%u B)\n", child->name, child->size);
+            (*files)++;
+        }
+    }
+}
+
+int cmd_tree(int argc, char **argv) {
+    const char *path = argc > 1 ? argv[1] : ".";
+    fs_node_t *dir = ramfs_lookup(path);
+    if (!dir || dir->type != FS_DIR) {
+        kprintf("tree: %s: no such directory\n", path); return -1;
+    }
+    kprintf("%s\n", path);
+    int files = 0, dirs = 0;
+    tree_walk(dir, 1, &files, &dirs);
+    kprintf("\n%d directories, %d files\n", dirs, files);
+    return 0;
+}
+
+static u32 du_walk(fs_node_t *dir) {
+    u32 total = 0;
+    fs_node_t *child;
+    for (int i = 0; ramfs_readdir(dir, i, &child) == 0; i++) {
+        if (child->type == FS_DIR) total += du_walk(child);
+        else total += child->size;
+    }
+    return total;
+}
+
+int cmd_du(int argc, char **argv) {
+    const char *path = argc > 1 ? argv[1] : ".";
+    fs_node_t *dir = ramfs_lookup(path);
+    if (!dir || dir->type != FS_DIR) {
+        kprintf("du: %s: no such directory\n", path); return -1;
+    }
+    u32 n = du_walk(dir);
+    kprintf("%s: %u bytes (%u KiB)\n", path, n, n / 1024);
+    return 0;
+}
+
+static void find_walk(fs_node_t *dir, const char *needle, const char *prefix, int *count) {
+    fs_node_t *child;
+    for (int i = 0; ramfs_readdir(dir, i, &child) == 0; i++) {
+        if (strstr(child->name, needle)) {
+            if (prefix[0] == '/') kprintf("%s/%s\n", prefix, child->name);
+            else kprintf("%s\n", child->name);
+            (*count)++;
+        }
+        if (child->type == FS_DIR) {
+            char sub[160];
+            if (prefix[0] == '/') ksnprintf(sub, sizeof(sub), "%s/%s", prefix, child->name);
+            else ksnprintf(sub, sizeof(sub), "%s/%s", prefix, child->name);
+            find_walk(child, needle, sub, count);
+        }
+    }
+}
+
+int cmd_find(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: find <name> [directory]\n"); return -1; }
+    const char *path = argc > 2 ? argv[2] : "/";
+    fs_node_t *dir = ramfs_lookup(path);
+    if (!dir || dir->type != FS_DIR) {
+        kprintf("find: %s: no such directory\n", path); return -1;
+    }
+    int count = 0;
+    find_walk(dir, argv[1], path, &count);
+    kprintf("find: %d match(es)\n", count);
+    return 0;
+}
+
+int cmd_new(int argc, char **argv) {
+    if (argc < 2) { kprintf("usage: new <file>   (create and open in the editor)\n"); return -1; }
+    fs_node_t *n = ramfs_lookup(argv[1]);
+    if (n && n->type != FS_FILE) { kprintf("new: %s is a directory\n", argv[1]); return -1; }
+    if (!n) {
+        fs_node_t *parent = ramfs_parent_of(argv[1]);
+        if (!parent || parent->type != FS_DIR) { kprintf("new: bad path\n"); return -1; }
+        n = ramfs_create(argv[1], FS_FILE);
+        if (!n) { kprintf("new: cannot create %s\n", argv[1]); return -1; }
+    }
+    return editor_run(argv[1]);
+}
+
 int cmd_write(int argc, char **argv) {
     if (argc < 3) { kprintf("usage: write <file> <text>\n"); return -1; }
     char text[512];
@@ -765,6 +950,15 @@ int cmd_credits(int argc, char **argv) {
 /* ------------------------------------------------------------------------- */
 /* graphics / games front-ends                                               */
 /* ------------------------------------------------------------------------- */
+int cmd_imgview(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    if (!store_module_bound(MOD_ENTRY_DESKTOP)) {
+        kprintf("imgview: install the GUI first: minipacket -I minimal-desktop\n");
+        return -1;
+    }
+    return cmd_startgui(0, NULL);
+}
+
 int cmd_startgui(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
     if (!store_module_bound(MOD_ENTRY_DESKTOP)) {
@@ -867,14 +1061,44 @@ int cmd_minipacket(int argc, char **argv) {
 /* networking                                                                */
 /* ------------------------------------------------------------------------- */
 int cmd_ifconfig(int argc, char **argv) {
-    UNUSED(argc); UNUSED(argv);
-    if (!net_info()->present) {
-        kprintf("eth0: no RTL8139 controller\n");
+    net_info_t *ni = net_info();
+    if (!ni->present) {
+        kprintf("eth0: no supported NIC found (RTL8139 / PCnet / e1000)\n");
         kprintf("QEMU: -netdev user,id=net0 -device rtl8139,netdev=net0\n");
+        kprintf("      -device e1000,netdev=net0   or   -device pcnet,netdev=net0\n");
         return -1;
     }
-    ifconfig_print();
-    return 0;
+    if (argc < 2) { ifconfig_print(); return 0; }
+
+    const char *sub = argv[1];
+    if (strcasecmp(sub, "dhcp") == 0 || strcasecmp(sub, "renew") == 0) {
+        kprintf("ifconfig: requesting DHCP lease via %s...\n", ni->name);
+        if (net_dhcp_renew()) { kprintf("ifconfig: lease acquired\n"); ifconfig_print(); return 0; }
+        kprintf("ifconfig: DHCP failed\n"); return -1;
+    }
+    if (strcasecmp(sub, "status") == 0) { ifconfig_print(); return 0; }
+    if (strcasecmp(sub, "up") == 0) {
+        ni->up = true; kprintf("ifconfig: %s up\n", ni->name); return 0;
+    }
+    if (strcasecmp(sub, "down") == 0) {
+        ni->up = false; kprintf("ifconfig: %s down\n", ni->name); return 0;
+    }
+    if (strcasecmp(sub, "set") == 0) {
+        if (argc < 6) {
+            kprintf("usage: ipconfig set <ip> <netmask> <gateway> <dns>\n"); return -1;
+        }
+        u32 ip = net_parse_ip(argv[2]);
+        u32 mask = net_parse_ip(argv[3]);
+        u32 gw = net_parse_ip(argv[4]);
+        u32 dns = net_parse_ip(argv[5]);
+        if (!ip) { kprintf("ifconfig: invalid IP %s\n", argv[2]); return -1; }
+        net_set_static(ip, mask, gw, dns);
+        kprintf("ifconfig: static configuration applied\n");
+        ifconfig_print();
+        return 0;
+    }
+    kprintf("usage: ipconfig [dhcp|status|up|down|set <ip> <mask> <gw> <dns>]\n");
+    return -1;
 }
 
 int cmd_ping(int argc, char **argv) {

@@ -6,6 +6,16 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.4.1 "Nova+"
+
+- **Persistent disk files**: FAT12/16 driver mounts the data partition at `/disk`. `mount`, `sync`, `format /disk`. Files saved there survive reboot after `install`.
+- **CD support**: ATAPI/IDE reader + ISO9660 parser mounts the boot CD at `/cd` with `cdrom`.
+- **USB**: OHCI host controller + mass-storage scaffolding (`usb_init` at boot).
+- **File tools**: `cp`, `mv`, `tree`, `du`, `find`, `new` (create-and-edit).
+- **Networking**: `ipconfig dhcp|status|up|down|set <ip> <mask> <gw> <dns>`; `ifconfig` alias.
+- **Image viewer**: GUI window with 8 bundled sample BMPs in `/pictures`, opened from the start menu or `imgview`.
+- **Editor**: Ctrl+A save-as, Ctrl+L line numbers.
+
 ## What's new in 1.4.0 "Nova"
 
 - **Crash screen that can actually be read.** A fault while the GUI is running
@@ -186,9 +196,10 @@ the button becomes active and shows the size.
 - `docs/` - design / build notes
 - source: `boot/`, `kernel/`, `drivers/`, `fs/`, `net/`, `gui/`
 - `tools/` - toolchain installer, compile check, store generator, run_test.sh
+
 ## Complete command reference
 
-Every command registered in `kernel/shell.c` (48 total), grouped by category.
+Every command registered in `kernel/shell.c` (60 total), grouped by category.
 
 ### Clock
 
@@ -203,18 +214,28 @@ Every command registered in `kernel/shell.c` (48 total), grouped by category.
 |---|---|---|
 | `cat` | `cat <file>` | print a file |
 | `cd` | `cd [path]` | change directory |
+| `cdrom` | `cdrom` | mount the boot CD at /cd |
+| `cp` | `cp <src> <dst>` | copy a file |
 | `df` | `df` | filesystem usage |
+| `du` | `du [dir]` | disk usage for a directory |
 | `echo` | `echo <text>` | print text |
 | `edit` | `edit <file>` | full-screen text editor |
+| `find` | `find <name> [dir]` | find files by name |
+| `format` | `format /disk` | erase and format the data partition |
 | `hexdump` | `hexdump <file> [bytes]` | hex + ASCII dump of a file |
 | `less` | `less <file>` | scroll through a text file |
 | `ls` | `ls [path]` | list a directory |
 | `memmap` | `memmap` | physical memory map and heap stats |
 | `mkdir` | `mkdir <dir>` | create a directory |
+| `mount` | `mount` | mount the disk data partition |
+| `mv` | `mv <src> <dst>` | move or rename a file |
+| `new` | `new <file>` | create and edit a new text file |
 | `pwd` | `pwd` | print working directory |
 | `read` | `read <file>` | alias for less |
 | `rm` | `rm <path>` | remove a file or directory |
+| `sync` | `sync` | flush disk file changes |
 | `touch` | `touch <file>` | create an empty file |
+| `tree` | `tree [dir]` | recursive directory tree |
 | `write` | `write <file> <text>` | replace a file with text |
 
 ### Games
@@ -229,6 +250,7 @@ Every command registered in `kernel/shell.c` (48 total), grouped by category.
 
 | Command | Usage | Description |
 |---|---|---|
+| `imgview` | `imgview` | open the GUI image viewer |
 | `miniland` | `miniland` | Miniland tiling WM (needs module) |
 | `startgui` | `startgui` | graphical desktop (needs module) |
 
@@ -237,7 +259,8 @@ Every command registered in `kernel/shell.c` (48 total), grouped by category.
 | Command | Usage | Description |
 |---|---|---|
 | `curl` | `curl <http://url>` | fetch an HTTP resource |
-| `ifconfig` | `ifconfig` | interface configuration |
+| `ifconfig` | `ipconfig [dhcp\|set ...]` | show or configure the network |
+| `ipconfig` | `ipconfig [dhcp\|set ...]` | alias for ifconfig |
 | `netstat` | `netstat` | network statistics |
 | `nslookup` | `nslookup <host>` | resolve a DNS name |
 | `ping` | `ping <ip\|host> [count]` | ICMP echo request |

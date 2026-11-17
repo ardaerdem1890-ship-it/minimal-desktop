@@ -11,6 +11,8 @@
 #include "pit.h"
 #include "mm.h"
 
+static bool dhcp_client(void);
+
 #define ETH_ARP  0x0806
 #define ETH_IPV4 0x0800
 
@@ -1109,6 +1111,26 @@ bool net_init(void) {
 bool net_is_up(void) { return info.present && info.up && info.ip != 0; }
 net_info_t *net_info(void) { return &info; }
 bool net_dhcp_acquired(void) { return dhcp_got_lease; }
+bool net_dhcp_renew(void) {
+    if (!info.present) return false;
+    dhcp_got_lease = false;
+    info.dhcp = false;
+    info.up = true;
+    info.ip = 0;
+    bool ok = dhcp_client();
+    if (ok) { info.dhcp = true; info.up = true; }
+    return ok;
+}
+
+void net_set_static(u32 ip, u32 mask, u32 gw, u32 dns) {
+    info.ip = ip;
+    info.netmask = mask ? mask : NET_IP(255, 255, 255, 0);
+    info.gateway = gw;
+    info.dns = dns;
+    info.up = (ip != 0);
+    info.dhcp = false;
+}
+
 
 void ifconfig_print(void) {
     net_poll();

@@ -18,7 +18,8 @@ static char ebuf[FS_MAX_FILE + 1];
 static int  elen;
 static int  epos;
 static bool dirty;
-static char epath[FS_NAME_MAX];
+static char epath[128];
+static bool line_numbers;
 static int  etop;
 
 static char rbuf[FS_MAX_FILE + 1];
@@ -70,7 +71,7 @@ static void draw_bar(const char *title, const char *right) {
     line[SCR_COLS] = 0;
     console_write_at(BAR_ROW, 0, line, console_make_attr(VGA_BLACK, VGA_LIGHT_GREY));
     console_write_at(HINT_ROW, 0,
-                     " F2/Ctrl+S save   Esc exit   arrows move   PgUp/PgDn scroll        ",
+                     " F2 save  Ctrl+A save-as  Ctrl+L lines  Esc exit  arrows move     ",
                      console_make_attr(VGA_LIGHT_GREY, VGA_BLUE));
 }
 
@@ -115,10 +116,17 @@ static void edit_render(void) {
         char rowbuf[SCR_COLS + 1];
         memset(rowbuf, ' ', SCR_COLS);
         rowbuf[SCR_COLS] = 0;
+        int indent = line_numbers ? 6 : 0;
+        if (line_numbers && line < total) {
+            char num[8];
+            ksnprintf(num, sizeof(num), "%4d ", line + 1);
+            memcpy(rowbuf, num, 5);
+            rowbuf[5] = '|';
+        }
         if (line < total) {
             int s = line_start(ebuf, elen, line);
             int e = line_end(ebuf, elen, line);
-            int shown = 0;
+            int shown = indent;
             for (int i = s; i < e && shown < TEXT_W; i++) {
                 char ch = ebuf[i];
                 rowbuf[shown++] = (ch == '\t') ? ' ' : (ch >= 32 ? ch : '.');
@@ -161,6 +169,7 @@ int editor_run(const char *path) {
     dirty = false;
     strncpy(epath, path, sizeof(epath) - 1);
     epath[sizeof(epath) - 1] = 0;
+    line_numbers = false;
 
     screen_begin("EDIT");
     edit_ensure_visible();
@@ -184,6 +193,42 @@ int editor_run(const char *path) {
                 }
             }
             if (key == KEY_ESC) break;
+        } else if (key == 1) {                             /* Ctrl+A = save as */
+            char prompt[96];
+            ksnprintf(prompt, sizeof(prompt), " Save as: %-64s", epath);
+            console_write_at(BAR_ROW, 0, prompt,
+                             console_make_attr(VGA_BLACK, VGA_YELLOW));
+            char newpath[128];
+            int nlen = 0;
+            newpath[0] = 0;
+            console_gotoxy(BAR_ROW, 10);
+            for (;;) {
+                wait_ms(4);
+                int k = kbd_getchar();
+                if (k < 0) continue;
+                if (k == KEY_ENTER) break;
+                if (k == KEY_ESC) { nlen = -1; break; }
+                if (k == KEY_BACKSPACE) {
+                    if (nlen > 0) { nlen--; console_write_at(BAR_ROW, 10 + nlen, " ", 0x0F); console_gotoxy(BAR_ROW, 10 + nlen); }
+                    continue;
+                }
+                if (k >= 32 && k < 127 && nlen < (int)sizeof(newpath) - 1) {
+                    newpath[nlen++] = (char)k;
+                    newpath[nlen] = 0;
+                    console_put_at(BAR_ROW, 10 + nlen - 1, (char)k, 0x0F);
+                }
+            }
+            if (nlen > 0) {
+                strncpy(epath, newpath, sizeof(epath) - 1);
+                epath[sizeof(epath) - 1] = 0;
+                if (edit_save() != 0)
+                    console_write_at(BAR_ROW, 0,
+                        " Save failed                                                        ",
+                        console_make_attr(VGA_WHITE, VGA_RED));
+            }
+            key = 0;
+        } else if (key == 12) {                            /* Ctrl+L = line numbers */
+            line_numbers = !line_numbers;
         } else if (key == KEY_F2 || (key == 19)) {          /* F2 or Ctrl+S */
             if (edit_save() != 0)
                 console_write_at(BAR_ROW, 0,

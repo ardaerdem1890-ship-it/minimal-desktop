@@ -12,6 +12,11 @@
 #include "mouse.h"
 #include "rtc.h"
 #include "ata.h"
+#include "fat.h"
+#include "bmp.h"
+#include "atapi.h"
+#include "iso9660.h"
+#include "usb.h"
 #include "pci.h"
 #include "net.h"
 #include "store.h"
@@ -68,6 +73,7 @@ void kernel_main(u32 magic, u32 info_addr) {
 
     task_init();
     ramfs_init();
+    bmp_sample_images();
     kprintf("[boot] RAMFS mounted at / (%u nodes)\n", ramfs_node_count());
 
     pit_init();
@@ -85,6 +91,9 @@ void kernel_main(u32 magic, u32 info_addr) {
     } else {
         kprintf("[boot] ATA: no disk attached\n");
     }
+    fat_automount();
+    if (atapi_init()) iso9660_mount();
+    usb_init();
 
     if (mb2_has_flag("--safe")) {
         kprintf("[boot] safe mode: network and store left offline\n");

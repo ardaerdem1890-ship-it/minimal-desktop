@@ -1,13 +1,13 @@
 [
   {
-    "version": "1.4.0",
-    "label": "v1.4.0 (current)",
+    "version": "1.4.1",
+    "label": "v1.4.1 (current)",
     "date": "2026-11-17",
     "latest": true,
-    "file": "downloads/minimal_desktop_v1.4.0.iso",
-    "notes": "Rebuilt crash screen that restores the VGA font and palette before printing (no more garbled fault screen) with a 5 second countdown and three reset paths. Leaving the GUI no longer corrupts the text console. Enter/Backspace/Tab/Esc scancodes fixed. 21 keyboard layouts with Alt+Shift, 'keymap list|next|<id>'. Terminal editor 'edit' and pager 'less'. Intel PRO/1000 (e1000) driver for VirtualBox alongside RTL8139 and PCnet. New gradient MINIMAL OS boot wordmark. 'minipacket -L' package listing. Disk installer: `install` streams the isohybrid image to the first ATA disk; boot splash rebuilt from your original ANSI art.",
-    "sha256": "0587ed373fb34d4274a1b290a95f72753f827b2ac6e909730e7d5f6621c9a839",
-    "size": 24117248
+    "file": "downloads/minimal_desktop_v1.4.1.iso",
+    "notes": "v1.4.1 feature update: FAT12/16 read-write disk persistence (/disk), ATAPI CD + ISO9660 reader (/cd), USB OHCI stack, full file tools (cp/mv/tree/find/du/new), ipconfig dhcp/set/status, image viewer with 8 sample images, editor save-as and line numbers. Plus all v1.4.0 stability fixes (crash screen, font, layouts, e1000).",
+    "sha256": "800eea21495072906f0099f08db7069c9fdff8a7014cc59c1576d5eb0e3fadfd",
+    "size": 32550912
   },
   {
     "version": "1.3.0",

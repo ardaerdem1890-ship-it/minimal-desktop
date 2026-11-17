@@ -18,13 +18,14 @@
 #include "string.h"
 #include "mm.h"
 #include "ramfs.h"
+#include "bmp.h"
 #include "io.h"
 
 #define TASKBAR_Y 178
 #define TASKBAR_H 22
 #define TITLE_H   10
 
-enum { WIN_TERM = 0, WIN_NOTE, WIN_TASKS, WIN_NET, WIN_BROWSER, WIN_EXPLORER, WIN_COUNT };
+enum { WIN_TERM = 0, WIN_NOTE, WIN_TASKS, WIN_NET, WIN_BROWSER, WIN_EXPLORER, WIN_IMGVIEW, WIN_COUNT };
 
 typedef struct {
     bool open;
@@ -39,10 +40,11 @@ static gui_win_t wins[WIN_COUNT] = {
     { false, 140,  24, 168, 116, WIN_TASKS,    "tasks"     },
     { false,  30,  24, 206, 126, WIN_NET,      "network"   },
     { false,  18,  10, 280, 150, WIN_BROWSER,  "minimalweb"},
-    { false,  26,  16, 240, 140, WIN_EXPLORER, "explorer"  }
+    { false,  26,  16, 240, 140, WIN_EXPLORER, "explorer"  },
+    { false,  50,  12, 220, 160, WIN_IMGVIEW,  "imgview"   }
 };
 
-static int zorder[WIN_COUNT] = { 0, 1, 2, 3, 4, 5 };
+static int zorder[WIN_COUNT] = { 0, 1, 2, 3, 4, 5, 6 };
 static int focus = WIN_TERM;
 static bool start_open;
 static int drag_win = -1;
@@ -52,6 +54,7 @@ static void notepad_key(int key);
 static void network_key(int key);
 static void browser_key(int key);
 static void explorer_key(int key);
+static void imgview_key(int key);
 
 static int drag_dx, drag_dy;
 static bool prev_left;
@@ -78,6 +81,12 @@ static char br_input[128];
 static char br_content[4096];
 static int  br_scroll;
 static bool br_loading_msg;
+
+/* image viewer state */
+static char iv_files[32][128];
+static int  iv_count;
+static int  iv_index;
+static u8   iv_frame[320 * 200];
 
 /* explorer state */
 static char ex_path[160];
@@ -586,6 +595,62 @@ static void draw_explorer(gui_win_t *w) {
     if (ex_count == 0) gfx_text(tx, ty, "(empty)", GUI_GREY);
 }
 
+static void iv_refresh(void) {
+    iv_count = 0;
+    fs_node_t *dir = ramfs_lookup("/pictures");
+    if (!dir || dir->type != FS_DIR) return;
+    fs_node_t *child;
+    for (int i = 0; ramfs_readdir(dir, i, &child) == 0 && iv_count < 32; i++) {
+        if (child->type != FS_FILE) continue;
+        const char *name = child->name;
+        int len = (int)strlen(name);
+        if (len >= 4 && strcasecmp(name + len - 4, ".bmp") == 0) {
+            ksnprintf(iv_files[iv_count++], sizeof(iv_files[0]), "/pictures/%s", name);
+        }
+    }
+}
+
+static void iv_load(void) {
+    memset(iv_frame, 0, sizeof(iv_frame));
+    if (iv_count == 0) return;
+    if (iv_index < 0) iv_index = 0;
+    if (iv_index >= iv_count) iv_index = iv_count - 1;
+    fs_node_t *f = ramfs_lookup(iv_files[iv_index]);
+    if (!f) return;
+    u8 *data = (u8 *)kmalloc(f->size);
+    if (!data) return;
+    if (ramfs_read(f, data, f->size, 0) == (int)f->size) {
+        bmp_load(data, f->size, iv_frame, 212, 144);
+    }
+    kfree(data);
+}
+
+static void draw_imgview(gui_win_t *w) {
+    int x = w->x + 4, y = w->y + TITLE_H + 3;
+    gfx_fill_rect(w->x + 2, w->y + TITLE_H + 1, w->w - 4, w->h - TITLE_H - 3, GUI_BLACK);
+    for (int row = 0; row < 144; row++) {
+        for (int col = 0; col < 212; col++) {
+            u8 c = iv_frame[row * 212 + col];
+            if (c) gfx_pixel(x + col, y + row, c);
+        }
+    }
+    char label[128];
+    ksnprintf(label, sizeof(label), "%d/%d  %s", iv_index + 1, iv_count,
+              iv_count ? iv_files[iv_index] : "(no images)");
+    gfx_text(x, w->y + w->h - 10, label, GUI_WHITE);
+    gfx_text(x, w->y + w->h - 18, "< > / [ ]  navigate    Esc  close", GUI_GREY);
+}
+
+static void imgview_key(int key) {
+    if (key == KEY_LEFT || key == '[') {
+        if (iv_index > 0) { iv_index--; iv_load(); }
+    } else if (key == KEY_RIGHT || key == ']') {
+        if (iv_index + 1 < iv_count) { iv_index++; iv_load(); }
+    } else if (key == 'r' || key == 'R') {
+        iv_refresh(); iv_load();
+    }
+}
+
 static void draw_windows(void) {
     for (int i = 0; i < WIN_COUNT; i++) {
         gui_win_t *w = &wins[zorder[i]];
@@ -598,6 +663,7 @@ static void draw_windows(void) {
             case WIN_NET:      draw_network(w);  break;
             case WIN_BROWSER:  draw_browser(w);  break;
             case WIN_EXPLORER: draw_explorer(w); break;
+            case WIN_IMGVIEW:  draw_imgview(w);  break;
             default: break;
         }
     }
@@ -651,13 +717,13 @@ static void draw_taskbar(void) {
     gfx_text(GFX_WIDTH - (int)strlen(clock) * 8 - 3, TASKBAR_Y + 7, clock, GUI_WHITE);
 }
 
-static const int start_icons[11] = {
+static const int start_icons[12] = {
     ICON_TERM, ICON_NOTEPAD, ICON_TASKS, ICON_NET, ICON_BROWSER,
-    ICON_EXPLORER, ICON_DOOM, ICON_SNAKE, ICON_PONG, ICON_DISK, ICON_START
+    ICON_EXPLORER, ICON_DOOM, ICON_SNAKE, ICON_PONG, ICON_DISK, ICON_START, ICON_FILE
 };
-static const char *start_labels[11] = {
+static const char *start_labels[12] = {
     "Terminal", "Notepad", "Tasks", "Network", "Browser",
-    "Explorer", "DOOM", "Snake", "Pong", "Screenshot", "Exit GUI"
+    "Explorer", "DOOM", "Snake", "Pong", "Screenshot", "Exit GUI", "Image Viewer"
 };
 
 static void draw_start_menu(void) {
@@ -670,11 +736,11 @@ static void draw_start_menu(void) {
     gfx_text(x + 4, y + 2, "Minimal Desktop", GUI_WHITE);
     gfx_text(x + w - 24, y + 2, "SUPER", GUI_YELLOW);
     gfx_hline(x + 2, y + 13, w - 4, GUI_GREY);
-    static const u8 cols[11] = {
+    static const u8 cols[12] = {
         GUI_GREEN, GUI_YELLOW, GUI_CYAN, GUI_BLUE, GUI_MAGENTA,
-        GUI_TITLE_LT, GUI_RED, GUI_GREEN, GUI_YELLOW, GUI_GREY, GUI_RED
+        GUI_TITLE_LT, GUI_RED, GUI_GREEN, GUI_YELLOW, GUI_GREY, GUI_RED, GUI_CYAN
     };
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 12; i++) {
         int cellx = x + 3 + (i % 2) * 74;
         int celly = y + 16 + (i / 2) * 18;
         gfx_fill_rect(cellx, celly, 72, 17, (i & 1) ? GUI_DESK2 : GUI_DESK1);
@@ -730,6 +796,7 @@ static void menu_click(int mx, int my) {
         case 8: launch_req = GUI_LAUNCH_PONG; running = false; break;
         case 9: save_screenshot(); break;
         case 10: running = false; break;
+        case 11: iv_refresh(); iv_index = 0; iv_load(); open_window(WIN_IMGVIEW); break;
         default: break;
     }
     start_open = false;
@@ -925,6 +992,7 @@ int gui_run(void) {
     term_cmd_len = 0;
     if (br_url[0] == 0) { strcpy(br_input, "about:home"); }
     if (ex_path[0] == 0) { strcpy(ex_path, "/home/minimal"); explorer_refresh(); }
+    iv_refresh(); iv_index = 0; iv_load();
     open_window(WIN_TERM);
 
     int pid = task_register("desktop", 320, true);
@@ -978,6 +1046,7 @@ int gui_run(void) {
             else if (focus == WIN_NET && wins[WIN_NET].open) network_key(key);
             else if (focus == WIN_BROWSER && wins[WIN_BROWSER].open) browser_key(key);
             else if (focus == WIN_EXPLORER && wins[WIN_EXPLORER].open) explorer_key(key);
+            else if (focus == WIN_IMGVIEW && wins[WIN_IMGVIEW].open) imgview_key(key);
             key = kbd_getchar();
         }
 

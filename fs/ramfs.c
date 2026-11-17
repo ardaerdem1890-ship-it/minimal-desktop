@@ -17,6 +17,9 @@ static fs_node_t *node_alloc(const char *name, u8 type, fs_node_t *parent) {
     n->type = type;
     n->parent = parent;
     n->inode = next_inode++;
+    n->dev_id = 0;
+    n->dev_ino = 0;
+    n->dirty = false;
     node_count++;
     return n;
 }

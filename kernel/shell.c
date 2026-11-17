@@ -7,6 +7,7 @@
 #include "keyboard.h"
 #include "task.h"
 #include "store.h"
+#include "fat.h"
 
 static const command_t commands[] = {
     { "help",     "System",   "help [command]",           "list commands or show usage",        cmd_help },
@@ -30,6 +31,16 @@ static const command_t commands[] = {
     { "rm",       "Files",    "rm <path>",                "remove a file or directory",         cmd_rm },
     { "cat",      "Files",    "cat <file>",               "print a file",                       cmd_cat },
     { "edit",     "Files",    "edit <file>",              "full-screen text editor",            cmd_edit },
+    { "new",      "Files",    "new <file>",               "create and edit a new text file",     cmd_new },
+    { "cp",       "Files",    "cp <src> <dst>",           "copy a file",                        cmd_cp },
+    { "mount",    "Files",    "mount",                    "mount the disk data partition",      cmd_mount },
+    { "cdrom",    "Files",    "cdrom",                    "mount the boot CD at /cd",           cmd_cdrom },
+    { "sync",     "Files",    "sync",                     "flush disk file changes",            cmd_sync },
+    { "format",   "Files",    "format /disk",             "erase and format the data partition",cmd_format },
+    { "mv",       "Files",    "mv <src> <dst>",           "move or rename a file",              cmd_mv },
+    { "tree",     "Files",    "tree [dir]",               "recursive directory tree",           cmd_tree },
+    { "du",       "Files",    "du [dir]",                 "disk usage for a directory",         cmd_du },
+    { "find",     "Files",    "find <name> [dir]",        "find files by name",                 cmd_find },
     { "less",     "Files",    "less <file>",              "scroll through a text file",         cmd_read },
     { "read",     "Files",    "read <file>",              "alias for less",                     cmd_read },
     { "write",    "Files",    "write <file> <text>",      "replace a file with text",           cmd_write },
@@ -48,11 +59,13 @@ static const command_t commands[] = {
     { "pong",       "Games",    "pong",                     "pong vs CPU (needs module)",         cmd_pong },
     { "doom",       "Games",    "doom",                     "DOOM raycaster (needs module)",      cmd_doom },
     { "startgui",   "Graphics", "startgui",                 "graphical desktop (needs module)",   cmd_startgui },
+    { "imgview",    "Graphics", "imgview",                  "open the GUI image viewer",          cmd_imgview },
     { "miniland",   "Graphics", "miniland",                 "Miniland tiling WM (needs module)",  cmd_miniland },
     { "keymap",     "System",   "keymap list|next|<layout>", "switch keyboard layout (Alt+Shift)", cmd_keymap },
     { "crash",      "System",   "crash",                    "deliberately fault (crash screen test)", cmd_crash },
     { "install",    "System",   "install",                  "write the OS image to the first ATA disk", cmd_install },
-    { "ifconfig",   "Network",  "ifconfig",                 "interface configuration",            cmd_ifconfig },
+    { "ifconfig",   "Network",  "ipconfig [dhcp|set ...]",  "show or configure the network",      cmd_ifconfig },
+    { "ipconfig",   "Network",  "ipconfig [dhcp|set ...]",  "alias for ifconfig",                 cmd_ifconfig },
     { "ping",     "Network",  "ping <ip|host> [count]",   "ICMP echo request",                  cmd_ping },
     { "nslookup", "Network",  "nslookup <host>",          "resolve a DNS name",                 cmd_nslookup },
     { "curl",     "Network",  "curl <http://url>",        "fetch an HTTP resource",             cmd_curl },
@@ -213,7 +226,10 @@ void shell_run(void) {
             linebuf[len] = 0;
             history_add(linebuf);
             history_pos = history_count;
-            if (len > 0) shell_execute(linebuf);
+            if (len > 0) {
+                shell_execute(linebuf);
+                fat_sync();          /* write /disk changes back to the FAT partition */
+            }
             len = 0;
             linebuf[0] = 0;
             prompt();
