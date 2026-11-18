@@ -119,7 +119,7 @@ user_t *users_login(void) {
     console_clear();
     console_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     kprintf("  ______________________________________________________\n");
-    kprintf(" |  MINIMAL DESKTOP 1.7.1  -  SECURE LOGIN              |\n");
+    kprintf(" |  MINIMAL DESKTOP 1.8.0  -  SECURE LOGIN              |\n");
     kprintf(" |______________________________________________________|\n\n");
     if (!ramfs_lookup("/disk")) {
         console_set_color(VGA_YELLOW, VGA_BLACK);

@@ -478,6 +478,16 @@ int cmd_su(int argc, char **argv) {
     return 0;
 }
 
+int cmd_charmap(int argc, char **argv) {
+    UNUSED(argc); UNUSED(argv);
+    kprintf("Turkish characters (0x80-0x8B):\n");
+    kprintf("  0x80=%c  0x81=%c  0x82=%c  0x83=%c  0x84=%c  0x85=%c\n",
+            0x80, 0x81, 0x82, 0x83, 0x84, 0x85);
+    kprintf("  0x86=%c  0x87=%c  0x88=%c  0x89=%c  0x8A=%c  0x8B=%c\n",
+            0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B);
+    return 0;
+}
+
 int cmd_fortune(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
     static const char *quotes[] = {

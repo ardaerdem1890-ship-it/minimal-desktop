@@ -1,9 +1,19 @@
 [
   {
-    "version": "1.7.1",
-    "label": "v1.7.1 (current)",
+    "version": "1.8.0",
+    "label": "v1.8.0 (current)",
     "date": "2026-11-18",
     "latest": true,
+    "file": "downloads/minimal_desktop_v1.8.0.iso",
+    "notes": "Turkish character support: real ğ ü ş ı ö ç İ Ü Ş Ö Ç glyphs in the VGA font, Turkish Q/F keyboard layouts emit them, shell/editor accept high-byte characters, and a charmap command. Fixed the boot splash wordmark and added image-viewer/settings desktop icons so every app opens from the desktop.",
+    "sha256": "61ec3d1ed6b0c66b7537222f3e7edda9a5b61efda9bce28c15715b2e31d8f9e6",
+    "size": 32604160
+  },
+  {
+    "version": "1.7.1",
+    "label": "v1.7.1",
+    "date": "2026-11-18",
+    "latest": false,
     "file": "downloads/minimal_desktop_v1.7.1.iso",
     "notes": "Fixed login/account creation during install: accounts entered at install time are now saved to the installed disk and survive reboot (verified: arda/123321). Fixed keyboard flush so stale Enter no longer skips the username prompt. Login banner shows correct version.",
     "sha256": "ca5183935678ac78c549c525bdf610d0dc31df3a9d4d2112a0bc325b01168aaa",

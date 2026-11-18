@@ -62,6 +62,7 @@ int cmd_crash(int, char **);
 int cmd_install(int, char **);
 int cmd_saver(int, char **);
 int cmd_fortune(int, char **);
+int cmd_charmap(int, char **);
 int cmd_banner(int, char **);
 int cmd_sudo(int, char **);
 int cmd_whoami(int, char **);

@@ -62,6 +62,7 @@ static const command_t commands[] = {
     { "chkdsk",   "System",   "chkdsk",                    "check the FAT disk filesystem",       cmd_chkdsk },
     { "beep",     "Tools",    "beep [Hz] [ms]",           "PC speaker tone",                    cmd_beep },
     { "fortune",  "Tools",    "fortune",                  "random programming quote",            cmd_fortune },
+    { "charmap",  "Tools",    "charmap",                  "show Turkish special characters",     cmd_charmap },
     { "banner",   "Tools",    "banner <text>",            "print ASCII-art banner",              cmd_banner },
     { "credits",  "Tools",    "credits",                  "about the project",                  cmd_credits },
     { "store",      "Packages", "store list|install|remove|info|repo|status", "package manager", cmd_store },

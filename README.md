@@ -6,6 +6,12 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.8.0 "Turkish"
+
+- **Turkish characters**: real `ğ ü ş ı ö ç İ Ü Ş Ö Ç` glyphs added to the VGA font (0x80-0x8B), Turkish Q/F layouts emit them, shell and editor accept them, and `charmap` displays them.
+- **Boot splash fixed**: clean `MINIMAL OS` gradient wordmark.
+- **Desktop icons**: image viewer and settings icons — every app opens from the desktop.
+
 ## What's new in 1.7.1 "LoginFix"
 
 - **Install-time account creation works**: the account you type during `install` is saved to the installed disk and available on first boot (verified: `arda` / `123321`).
@@ -223,7 +229,7 @@ the button becomes active and shows the size.
 
 ## Complete command reference
 
-Every command registered in `kernel/shell.c` (77 total), grouped by category.
+Every command registered in `kernel/shell.c` (78 total), grouped by category.
 
 ### Clock
 
@@ -335,6 +341,7 @@ Every command registered in `kernel/shell.c` (77 total), grouped by category.
 | `banner` | `banner <text>` | print ASCII-art banner |
 | `beep` | `beep [Hz] [ms]` | PC speaker tone |
 | `calc` | `calc <expression>` | integer calculator |
+| `charmap` | `charmap` | show Turkish special characters |
 | `credits` | `credits` | about the project |
 | `fortune` | `fortune` | random programming quote |
 | `matrix` | `matrix [seconds]` | digital rain effect |

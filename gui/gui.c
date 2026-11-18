@@ -428,10 +428,12 @@ static void draw_desktop(void) {
 }
 
 static void draw_desktop_icons(void) {
-    static const char *names[] = { "Term", "Note", "Tasks", "Net", "Web", "Files", "DOOM" };
+    static const char *names[] = { "Term", "Note", "Tasks", "Net", "Web", "Files", "Pics", "Set", "DOOM" };
     static const int icons[] = { ICON_TERM, ICON_NOTEPAD, ICON_TASKS, ICON_NET,
-                                 ICON_BROWSER, ICON_EXPLORER, ICON_DOOM };
-    static const u8 colors[] = { GUI_GREEN, GUI_YELLOW, GUI_CYAN, GUI_BLUE, GUI_MAGENTA, GUI_TITLE_LT, GUI_RED };
+                                 ICON_BROWSER, ICON_EXPLORER, ICON_FILE,
+                                 ICON_SPEAKER, ICON_DOOM };
+    static const u8 colors[] = { GUI_GREEN, GUI_YELLOW, GUI_CYAN, GUI_BLUE,
+                                 GUI_MAGENTA, GUI_TITLE_LT, GUI_CYAN, GUI_YELLOW, GUI_RED };
     for (int i = 0; i < 7; i++) {
         int col = i / 4, row = i % 4;
         int x = 6 + col * 44;
@@ -933,7 +935,7 @@ static void handle_click(int mx, int my) {
     }
 
     /* desktop icons */
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 9; i++) {
         int col = i / 4, row = i % 4;
         int ix = 6 + col * 44, iy = 8 + row * 40;
         if (point_in(mx, my, ix, iy, 30, 32)) {
@@ -944,7 +946,9 @@ static void handle_click(int mx, int my) {
                 case 3: open_window(WIN_NET); break;
                 case 4: open_window(WIN_BROWSER); if (br_url[0]==0) browser_load("about:home"); break;
                 case 5: open_window(WIN_EXPLORER); explorer_refresh(); break;
-                case 6: launch_req = GUI_LAUNCH_DOOM; running = false; break;
+                case 6: iv_refresh(); iv_index = 0; iv_load(); open_window(WIN_IMGVIEW); break;
+                case 7: open_window(WIN_SETTINGS); break;
+                case 8: launch_req = GUI_LAUNCH_DOOM; running = false; break;
             }
             return;
         }
