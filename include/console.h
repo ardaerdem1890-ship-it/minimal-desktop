@@ -3,8 +3,8 @@
 
 #define OS_NAME        "Minimal Desktop"
 #define OS_SHORTNAME   "minimal_desktop"
-#define OS_VERSION     "1.8.1"
-#define OS_CODENAME    "Splash"
+#define OS_VERSION     "1.8.2"
+#define OS_CODENAME    "Agent"
 #define OS_BUILD       __DATE__ " " __TIME__
 #define OS_ARCH        "x86 (i386 protected mode)"
 

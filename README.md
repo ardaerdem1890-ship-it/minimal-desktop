@@ -6,6 +6,10 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.8.2 "Agent"
+
+- **Agent cursor**: a magenta crosshair with an `AI` tag that follows the focused window, so you can see which app the automated session is working in.
+
 ## What's new in 1.8.1 "Splash"
 
 - **Boot splash rebuilt from the exact ANSI bash you provided** — the white/cyan/blue gradient `MINIMAL OS` wordmark with shaded bottom rows now matches the source precisely.

@@ -1,9 +1,19 @@
 [
   {
-    "version": "1.8.1",
-    "label": "v1.8.1 (current)",
+    "version": "1.8.2",
+    "label": "v1.8.2 (current)",
     "date": "2026-11-18",
     "latest": true,
+    "file": "downloads/minimal_desktop_v1.8.2.iso",
+    "notes": "Added a visible agent cursor: a magenta crosshair with an AI tag that follows the focused window, so you can see which app the automated session is working in. Turkish characters, exact ANSI splash, and all prior features retained.",
+    "sha256": "14ea5f6ce8f21ac62f3f7a1df373b7f293e62a9adb0e9a934d7d6c045b1380d0",
+    "size": 32612352
+  },
+  {
+    "version": "1.8.1",
+    "label": "v1.8.1",
+    "date": "2026-11-18",
+    "latest": false,
     "file": "downloads/minimal_desktop_v1.8.1.iso",
     "notes": "Boot splash regenerated from the user-provided ANSI bash: the exact white/cyan/blue gradient MINIMAL OS wordmark with shaded bottom rows. Turkish characters and all prior features retained.",
     "sha256": "549f66667aa27389d278c1656fff2cf02ccc3221190fa1241eb5988096a4d3bb",

@@ -71,6 +71,19 @@ static bool show_clock = true;
 static int resize_win = -1;
 static int resize_mode = 0;
 static u32 super_last;
+/* agent cursor: a distinct pointer that marks the focused window so the user
+ * can see which app the automated session is working in. */
+static int agent_x = 40, agent_y = 30;
+static int agent_target_x = 40, agent_target_y = 30;
+static u32 agent_last_activity;
+
+static void agent_point_at_focus(void) {
+    if (focus < 0 || focus >= WIN_COUNT) return;
+    gui_win_t *w = &wins[focus];
+    agent_target_x = w->x + w->w / 2;
+    agent_target_y = w->y + 12;
+    agent_last_activity = pit_ticks();
+}
 
 /* terminal state */
 static char term_buf[1400];
@@ -163,6 +176,7 @@ static void bring_to_front(int idx) {
     for (int i = pos; i < WIN_COUNT - 1; i++) zorder[i] = zorder[i + 1];
     zorder[WIN_COUNT - 1] = idx;
     focus = idx;
+    agent_point_at_focus();
 }
 
 static void open_window(int idx) {
@@ -808,6 +822,15 @@ static void draw_cursor(int mx, int my) {    for (int i = 0; i < 10; i++) {
         gfx_hline(mx + 1, my + i, w, GUI_BLACK);
     }
     gfx_vline(mx, my, 10, GUI_CURSOR);
+
+    /* Agent cursor: magenta crosshair + "AI" tag, eased toward focused window. */
+    agent_x += (agent_target_x - agent_x) / 4;
+    agent_y += (agent_target_y - agent_y) / 4;
+    int ax = agent_x, ay = agent_y;
+    gfx_hline(ax - 8, ay, 17, GUI_MAGENTA);
+    gfx_vline(ax, ay - 8, 17, GUI_MAGENTA);
+    gfx_fill_rect(ax - 2, ay - 2, 5, 5, GUI_WHITE);
+    gfx_text(ax + 8, ay - 14, "AI", GUI_MAGENTA);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1088,6 +1111,7 @@ int gui_run(void) {
         prev_left = left;
 
         int key = kbd_getchar();
+        if (key >= 0) { agent_last_activity = pit_ticks(); agent_point_at_focus(); }
         while (key >= 0) {
             if (key == KEY_ESC) { running = false; break; }
             if (key == KEY_SUPER) {
