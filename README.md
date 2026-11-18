@@ -6,6 +6,10 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.8.1 "Splash"
+
+- **Boot splash rebuilt from the exact ANSI bash you provided** — the white/cyan/blue gradient `MINIMAL OS` wordmark with shaded bottom rows now matches the source precisely.
+
 ## What's new in 1.8.0 "Turkish"
 
 - **Turkish characters**: real `ğ ü ş ı ö ç İ Ü Ş Ö Ç` glyphs added to the VGA font (0x80-0x8B), Turkish Q/F layouts emit them, shell and editor accept them, and `charmap` displays them.
