@@ -643,6 +643,19 @@ static void read_install_line(char *buf, int max, bool hide) {
 int cmd_install(int argc, char **argv) {
     UNUSED(argc); UNUSED(argv);
 
+    /* Ask for the account FIRST, while the shell is idle and the keyboard
+     * queue is clean. Doing this after the long disk write let a stale Enter
+     * from the confirmation slip into the username prompt. */
+    char new_user[32] = {0}, new_pass[32] = {0};
+    kprintf("=== Create your account (Enter to keep ROOT/root) ===\n");
+    kprintf("username: ");
+    read_install_line(new_user, sizeof(new_user), false);
+    if (new_user[0]) {
+        kprintf("password: ");
+        read_install_line(new_pass, sizeof(new_pass), true);
+        if (!new_pass[0]) strncpy(new_pass, "changeme", 31);
+    }
+
     u32 src = 0, src_end = 0;
     const char *modname = NULL;
     bool found = false;
@@ -702,26 +715,20 @@ int cmd_install(int argc, char **argv) {
     }
     kprintf("install: verified sector 0.\n\n");
 
-    /* Ask the installer to create their account. This is written into the
-     * installed disk's FAT data partition so it is there on first boot. */
-    kprintf("=== Create your account (or press Enter to keep ROOT/root) ===\n");
-    char name[32] = {0}, pass[32] = {0};
-    kprintf("username: ");
-    read_install_line(name, sizeof(name), false);
-    if (name[0]) {
-        kprintf("password: ");
-        read_install_line(pass, sizeof(pass), true);
-        if (!pass[0]) { strncpy(pass, "changeme", 31); }
+    /* Persist the account to the freshly written disk's FAT partition. */
+    if (new_user[0]) {
+        if (ramfs_lookup("/disk") && !fat_present()) ramfs_unlink("/disk");
+        if (!fat_present()) fat_automount();
         if (!ramfs_lookup("/disk")) ramfs_create("/disk", FS_DIR);
         if (!ramfs_lookup("/disk/users.cfg")) {
             char line[128];
             ksnprintf(line, sizeof(line), "ROOT 0 1 root\n");
             fs_node_t *cfg = ramfs_create("/disk/users.cfg", FS_FILE);
             if (cfg) ramfs_append(cfg, line, (u32)strlen(line));
-            ksnprintf(line, sizeof(line), "%s 1000 1 %s\n", name, pass);
+            ksnprintf(line, sizeof(line), "%s 1000 1 %s\n", new_user, new_pass);
             if (cfg) ramfs_append(cfg, line, (u32)strlen(line));
             fat_sync();
-            kprintf("account '%s' created on the installed disk.\n", name);
+            kprintf("account '%s' saved to the installed disk.\n", new_user);
         }
     }
     kprintf("Remove the CD/USB and reboot; the disk boots Minimal Desktop.\n");

@@ -1,9 +1,19 @@
 [
   {
-    "version": "1.7.0",
-    "label": "v1.7.0 (current)",
+    "version": "1.7.1",
+    "label": "v1.7.1 (current)",
     "date": "2026-11-18",
     "latest": true,
+    "file": "downloads/minimal_desktop_v1.7.1.iso",
+    "notes": "Fixed login/account creation during install: accounts entered at install time are now saved to the installed disk and survive reboot (verified: arda/123321). Fixed keyboard flush so stale Enter no longer skips the username prompt. Login banner shows correct version.",
+    "sha256": "ca5183935678ac78c549c525bdf610d0dc31df3a9d4d2112a0bc325b01168aaa",
+    "size": 32604160
+  },
+  {
+    "version": "1.7.0",
+    "label": "v1.7.0",
+    "date": "2026-11-18",
+    "latest": false,
     "file": "downloads/minimal_desktop_v1.7.0.iso",
     "notes": "Fixed the GUI image viewer (BMP header parsing and start-menu item) so sample images render correctly. Added GUI mouse cursor settings (arrow/cross/block, sensitivity, clock toggle) and window resizing by dragging edges/corners. Verified clean text-mode return when leaving the GUI.",
     "sha256": "914ee98fbce309df823f73b07a1951d7ee586599a242e6587322386bd44706fe",

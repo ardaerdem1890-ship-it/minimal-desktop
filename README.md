@@ -6,6 +6,12 @@ RAM filesystem, a command shell, a built-in software store, a GUI desktop, and
 a full Ethernet stack (ARP/ICMP/UDP/DHCP/DNS/TCP/HTTP) with drivers for the
 RTL8139, AMD PCnet and Intel PRO/1000 NICs.
 
+## What's new in 1.7.1 "LoginFix"
+
+- **Install-time account creation works**: the account you type during `install` is saved to the installed disk and available on first boot (verified: `arda` / `123321`).
+- **Keyboard fix**: a stale Enter from the install confirmation no longer skips the username prompt.
+- Login banner shows the correct version.
+
 ## What's new in 1.7.0 "Viewer"
 
 - **Image viewer fixed**: the bundled sample BMPs now render correctly (`v` key in the GUI, or the Image Viewer start-menu item).

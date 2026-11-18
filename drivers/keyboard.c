@@ -360,6 +360,12 @@ bool kbd_has_key(void) {
 void kbd_flush(void) {
     u32 flags = irq_save();
     q_tail = q_head;
+    /* Also drain the 8042 output buffer: an Enter from a previous prompt can
+     * sit here and be delivered to the next reader after the queue is cleared. */
+    for (int i = 0; i < 32; i++) {
+        if (!(inb(KBD_STATUS) & 0x01)) break;
+        (void)inb(KBD_DATA);
+    }
     irq_restore(flags);
 }
 
