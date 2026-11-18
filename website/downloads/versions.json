@@ -6,7 +6,7 @@
     "latest": true,
     "file": "downloads/minimal_desktop_v1.7.0.iso",
     "notes": "Fixed the GUI image viewer (BMP header parsing and start-menu item) so sample images render correctly. Added GUI mouse cursor settings (arrow/cross/block, sensitivity, clock toggle) and window resizing by dragging edges/corners. Verified clean text-mode return when leaving the GUI.",
-    "sha256": "fbe31dd646d77453a45f6993f01670dd8b9396972623420b015bec4a8ea623ee",
+    "sha256": "914ee98fbce309df823f73b07a1951d7ee586599a242e6587322386bd44706fe",
     "size": 32604160
   },
   {
